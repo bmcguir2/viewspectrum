@@ -14,6 +14,7 @@
 # 1.5 - streamlining gaussian tomfoolery
 # 1.6 - enabling frequency limits
 # 1.7 - adding ability to apply a VLSR offset to the simulated spectrum
+# 1.8 - adding ability to write a simulation out from interactive session
 
 #############################################################
 #							Preamble						#
@@ -29,7 +30,7 @@ from matplotlib.ticker import AutoMinorLocator
 import matplotlib.pyplot as plt
 #warnings.filterwarnings('error')
 
-version = 1.7
+version = 1.8
 
 h = 6.626*10**(-34) #Planck's constant in J*s
 k = 1.381*10**(-23) #Boltzmann's constant in J/K
@@ -828,7 +829,7 @@ if args.write:
 
 make_plots(freq,int)
 	
-print('For help, type help.')
+print('For a list of available commands, type \'help.\'')
 
 quit_con = False
 
@@ -855,51 +856,89 @@ while quit_con == False:
 		
 		print('G:\t Re-draws the graph if accidentally closed.\n')
 		
+		print('W X:\t Exports the current simulation to an ascii file named X.\n')
+		
 		print('q:\t Quits the program.\n')
 		
 		print('h:\t Displays this message.\n')
 	
-	if any(choice == x for x in quitlist):
+	elif any(choice == x for x in quitlist):
 	
 		quit_con = True
 		
-	if 't' in choice:
+	elif 't' in choice[0]:
 	
 		plt.close()
 	
-		new_temp = float(choice.split()[1])
+		try:
+			new_temp = float(choice.split()[1])
+		except IndexError:
+			try:
+				new_temp = float(choice[1:])
+			except:
+				print('Unrecognized command.  Type \'help\' for a list of commands.')
 		
 		update_T(new_temp)
 		
-	if 'dv' in choice:
+	elif 'dv' in choice:
 	
 		plt.close()
 	
-		new_dV = float(choice.split()[1])
+		try:
+			new_dV = float(choice.split()[1])
+		except IndexError:
+			try:
+				new_dV = float(choice[1:])
+			except:
+				print('Unrecognized command.  Type \'help\' for a list of commands.')
 		
 		update_dV(new_dV)
 		
-	if 's' in choice:
+	elif 's' in choice[0]:
 	
 		plt.close()
-	
-		new_specS = float(choice.split()[1])
+		
+		try:
+			new_specS = float(choice.split()[1])
+		except IndexError:
+			try:
+				new_specS = float(choice[1:])
+			except:
+				print('Unrecognized command.  Type \'help\' for a list of commands.')
 		
 		update_specS(new_specS)
 		
-	if 'v' in choice:
+	elif 'v' in choice[0]:
 	
 		plt.close()
 	
-		new_vlsr = float(choice.split()[1])
+		try:
+			new_vlsr = float(choice.split()[1])
+		except IndexError:
+			try:
+				new_vlsr = float(choice[1:])
+			except:
+				print('Unrecognized command.  Type \'help\' for a list of commands.')
 		
 		update_vlsr(new_vlsr)		
 		
-	if 'g' in choice:
+	elif 'g' in choice[0]:
 	
 		plt.close()
 		
-		make_plots(freq,int)				
+		make_plots(freq,int)	
+		
+	elif 'w' in choice[0]:
+	
+		try:
+			output_file = str(choice.split()[1])
+			write_spectrum(freq,int,output_file)
+		except:
+			print('Sorry, I couldn\'t quite parse that.  Please remember a space between the \'w\' and the desired output file name.')
+			
+	else:
+	
+		print('Unrecognized command.  Type "help" for a list of commands.')			
 			
 #ttotal = end_time - start_time
 

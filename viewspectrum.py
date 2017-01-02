@@ -13,6 +13,7 @@
 # 1.4 - Include ability to underplot actual spectra
 # 1.5 - streamlining gaussian tomfoolery
 # 1.6 - enabling frequency limits
+# 1.7 - adding ability to apply a VLSR offset to the simulated spectrum
 
 #############################################################
 #							Preamble						#
@@ -28,11 +29,12 @@ from matplotlib.ticker import AutoMinorLocator
 import matplotlib.pyplot as plt
 #warnings.filterwarnings('error')
 
-version = 1.6
+version = 1.7
 
 h = 6.626*10**(-34) #Planck's constant in J*s
 k = 1.381*10**(-23) #Boltzmann's constant in J/K
 kcm = 0.69503476 #Boltzmann's constant in cm-1/K
+ckm = 2.998*10**5 #speed of light in km/s
 
 #############################################################
 #							Read Input						#
@@ -49,6 +51,7 @@ parser.add_argument('-NP', '--noplot', action='store_true', help='skip plotting'
 parser.add_argument('-G', '--gauss', action='store_true', help='Simulate Gaussians.  Default linewidth is 5 km/s, with a resolution of 0.5 km/s.  Modify this with the -dV and -R options.  Warning: this may take a very, very long time.')
 parser.add_argument('-dV', type=float, help='velocity width for simulated Gaussians in km/s.  Default is 5.')
 parser.add_argument('-R', type=float, help='Resolution for simulated Gaussians in km/s.  Default is 0.5.  Currently does not work.')
+parser.add_argument('-lsr', type=float, help='Apply a VLSR correction in km/s to the simulated spectrum.')
 parser.add_argument('-spec', type=str, help='Underplot a lab or astronomical spectrum in a given filename.')
 parser.add_argument('-specS', type=float, help='An optional intensity scaling factor to apply to the simulation.')
 args = parser.parse_args()
@@ -58,6 +61,12 @@ output_file = '{}.spec' .format(args.basename.strip('.')) #Output file
 	
 T = args.T #Rotational temperature
 basename = args.basename.strip('.')
+
+vlsr = 0.0
+
+if args.lsr:
+
+	vlsr = args.lsr
 
 if args.ll:
 
@@ -694,6 +703,8 @@ def make_plots(freq,int):
 
 def update_T(new_temp):
 	
+	global T,freq,int
+	
 	T = new_temp
 	
 	freq,int = run_sim(frequency,intensity,T,dV,specS)
@@ -703,6 +714,8 @@ def update_T(new_temp):
 #update_dV updates the linewidth, redoes the simulation, and spits everything back out again.
 
 def update_dV(new_dV):
+	
+	global dV,freq,int
 	
 	dV = new_dV
 	
@@ -714,11 +727,29 @@ def update_dV(new_dV):
 
 def update_specS(new_specS):
 	
+	global specS,freq,int 
+	
 	specS = new_specS
 	
 	freq,int = run_sim(frequency,intensity,T,dV,specS)
 	
-	make_plots(freq,int)		
+	make_plots(freq,int)
+	
+#update_vlsr updates the vlsr, redoes the simulation, and spits everything back out again.
+
+def update_vlsr(new_vlsr):
+	
+	global vlsr,freq,int,frequency
+	
+	vlsr = new_vlsr
+	
+	freq_temp = np.copy(frequency)
+	
+	freq_temp += (-vlsr)*freq_temp/ckm
+	
+	freq,int = run_sim(freq_temp,intensity,T,dV,specS)
+	
+	make_plots(freq,int)			
 	
 	
 
@@ -736,7 +767,12 @@ if args.ll or args.ul:
 
 catalog = splice_array(raw_array)
 
-frequency = catalog[0]
+frequency = np.empty_like(catalog[0])
+
+for x in range(len(frequency)):
+
+	frequency[x] = catalog[0][x]
+
 logint = catalog[2]
 qn7 = np.asarray(catalog[14])
 qn8 = np.asarray(catalog[15])
@@ -753,6 +789,10 @@ eupper = elower + frequency/29979.2458
 qns = det_qns(qn7,qn8,qn9,qn10,qn11,qn12) #figure out how many qns we have for the molecule
 
 intensity = convert_int(logint)
+
+if args.lsr:
+
+	frequency += (-vlsr)*frequency/ckm
 
 if args.spec:
 
@@ -788,7 +828,7 @@ if args.write:
 
 make_plots(freq,int)
 	
-print('You may update the scaling factor (specS), temperature (T), or linewidth (dV) now using S X, T X, or dV X, with X the desired value, or type Q to exit.')
+print('For help, type help.')
 
 quit_con = False
 
@@ -799,6 +839,25 @@ while quit_con == False:
 	choice = choice.lower()
 	
 	quitlist = ['q','quit','e','exit']
+	helplist = ['h', 'help']
+	
+	if any(choice == x for x in helplist):
+	
+		print('The program is now in interactive mode.  The following options are available:\n')
+		
+		print('S X:\t Update the scaling factor (specS) to X.  Re-draws the graph.\n')
+		
+		print('T X:\t Update the temperature (T) to X.  Re-draws the graph.\n')
+		
+		print('V X:\t Update the VLSR (vlsr) to X.  Re-draws the graph.\n')
+		
+		print('dV X:\t Update the linewidth to X. Re-draws the graph.\n')
+		
+		print('G:\t Re-draws the graph if accidentally closed.\n')
+		
+		print('q:\t Quits the program.\n')
+		
+		print('h:\t Displays this message.\n')
 	
 	if any(choice == x for x in quitlist):
 	
@@ -826,7 +885,21 @@ while quit_con == False:
 	
 		new_specS = float(choice.split()[1])
 		
-		update_specS(new_specS)				
+		update_specS(new_specS)
+		
+	if 'v' in choice:
+	
+		plt.close()
+	
+		new_vlsr = float(choice.split()[1])
+		
+		update_vlsr(new_vlsr)		
+		
+	if 'g' in choice:
+	
+		plt.close()
+		
+		make_plots(freq,int)				
 			
 #ttotal = end_time - start_time
 

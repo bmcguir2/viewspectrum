@@ -15,6 +15,7 @@
 # 1.6 - enabling frequency limits
 # 1.7 - adding ability to apply a VLSR offset to the simulated spectrum
 # 1.8 - adding ability to write a simulation out from interactive session
+# 2.0 - dynamically-updating plots
 
 #############################################################
 #							Preamble						#
@@ -30,7 +31,7 @@ from matplotlib.ticker import AutoMinorLocator
 import matplotlib.pyplot as plt
 #warnings.filterwarnings('error')
 
-version = 1.8
+version = 2.0
 
 h = 6.626*10**(-34) #Planck's constant in J*s
 k = 1.381*10**(-23) #Boltzmann's constant in J/K
@@ -52,7 +53,7 @@ parser.add_argument('-NP', '--noplot', action='store_true', help='skip plotting'
 parser.add_argument('-G', '--gauss', action='store_true', help='Simulate Gaussians.  Default linewidth is 5 km/s, with a resolution of 0.5 km/s.  Modify this with the -dV and -R options.  Warning: this may take a very, very long time.')
 parser.add_argument('-dV', type=float, help='velocity width for simulated Gaussians in km/s.  Default is 5.')
 parser.add_argument('-R', type=float, help='Resolution for simulated Gaussians in km/s.  Default is 0.5.  Currently does not work.')
-parser.add_argument('-lsr', type=float, help='Apply a VLSR correction in km/s to the simulated spectrum.')
+parser.add_argument('-vlsr', type=float, help='Apply a VLSR correction in km/s to the simulated spectrum.')
 parser.add_argument('-spec', type=str, help='Underplot a lab or astronomical spectrum in a given filename.')
 parser.add_argument('-specS', type=float, help='An optional intensity scaling factor to apply to the simulation.')
 args = parser.parse_args()
@@ -65,9 +66,9 @@ basename = args.basename.strip('.')
 
 vlsr = 0.0
 
-if args.lsr:
+if args.vlsr:
 
-	vlsr = args.lsr
+	vlsr = args.vlsr
 
 if args.ll:
 
@@ -564,106 +565,6 @@ def sim_gaussian(TA,frequency,linewidth):
 	
 	return(freq_gauss,int_gauss)
 
-#plot_spectrum will show a stick spectrum of whatever frequency and intensity values given to it.
-	
-def plot_spectrum(freq,TA):
-
-	minorLocator = AutoMinorLocator(5)
-	fig, ax = plt.subplots()
-	plt.xlabel('Frequency (MHz)')
-		
-	plt.ylabel('Intensity (Probably Arbitrary)')
-		
-	plt.locator_params(nbins=4) #Use only 4 actual numbers on the x-axis
-	ax.xaxis.set_minor_locator(minorLocator) #Let the program calculate some minor ticks from that
-		
-	ax.get_xaxis().get_major_formatter().set_scientific(False) #Don't let the x-axis go into scientific notation
-	ax.get_xaxis().get_major_formatter().set_useOffset(False)
-	
-	fig.patch.set_facecolor('white')
-	
-	if args.gauss == False:
-			
-		plt.vlines(freq,0,TA,linestyle = '-',color = 'red') #Plot sticks from TA down to 0 at each point in freq.
-		
-	else:
-	
-		plt.plot(freq,TA,color = 'red')
-
-	plt.show(block=False) #Plot it!
-	
-	
-#plot_spectrum_obs will show a spectrum of whatever frequency and intensity values given to it overplotted on a lab or observational spectrum
-	
-def plot_spectrum_obs(freq,TA,freq_obs,int_obs):
-
-	minorLocator = AutoMinorLocator(5)
-	fig, ax = plt.subplots()
-	plt.xlabel('Frequency (MHz)')
-		
-	plt.ylabel('Intensity (Probably Arbitrary)')
-		
-	plt.locator_params(nbins=4) #Use only 4 actual numbers on the x-axis
-	ax.xaxis.set_minor_locator(minorLocator) #Let the program calculate some minor ticks from that
-		
-	ax.get_xaxis().get_major_formatter().set_scientific(False) #Don't let the x-axis go into scientific notation
-	ax.get_xaxis().get_major_formatter().set_useOffset(False)
-	
-	fig.patch.set_facecolor('white')
-	
-	plt.plot(freq_obs,int_obs,color = 'black')
-	
-	if args.gauss == False:
-			
-		plt.vlines(freq,0,TA,linestyle = '-',color = 'red') #Plot sticks from TA down to 0 at each point in freq.
-		
-	else:
-	
-		plt.plot(freq,TA,color = 'red',gid = id)
-	
-	plt.show(block=False) #Plot it!
-		
-
-#write_spectrum writes the spectrum to the output file.
-	
-def write_spectrum(frequency,intensity,output_file):
-
-	if args.gauss:
-	
-		for h in range(len(frequency)):
-
-			if (h == 0): #write out the results to a out_file
-			
-				with open(output_file, 'w') as output: 
-					
-					output.write('{} {}\n' .format(frequency[0],intensity[0]))
-						
-			else:
-				
-				with open(output_file, 'a') as output:
-					
-					output.write('{} {}\n' .format(frequency[h],intensity[h]))
-						
-			h += 1		
-	
-	else:
-	
-		for h in range(frequency.shape[0]):
-
-			if (h == 0): #write out the results to a out_file
-				
-				with open(output_file, 'w') as output: 
-					
-					output.write('{} {}\n' .format(frequency[0],intensity[0]))
-						
-			else:
-				
-				with open(output_file, 'a') as output:
-					
-					output.write('{} {}\n' .format(frequency[h],intensity[h]))
-						
-			h += 1				
-
 #run_sim runs the simulation.  It's a meta routine, so that we can update later
 
 def run_sim(frequency,intensity,T,dV,specS):
@@ -684,76 +585,7 @@ def run_sim(frequency,intensity,T,dV,specS):
 		
 	return freq,int
 
-#make_plots is a meta function for making the plots appear
-
-def make_plots(freq,int):
-
-	if args.noplot:
-
-		pass
 	
-	elif args.spec:
-
-		plot_spectrum_obs(freq,int,freq_obs,int_obs)	
-
-	else:
-	
-		plot_spectrum(freq,int)
-
-#update_T updates the temperature, redoes the simulation, and spits everything back out again.
-
-def update_T(new_temp):
-	
-	global T,freq,int
-	
-	T = new_temp
-	
-	freq,int = run_sim(frequency,intensity,T,dV,specS)
-	
-	make_plots(freq,int)
-	
-#update_dV updates the linewidth, redoes the simulation, and spits everything back out again.
-
-def update_dV(new_dV):
-	
-	global dV,freq,int
-	
-	dV = new_dV
-	
-	freq,int = run_sim(frequency,intensity,T,dV,specS)
-	
-	make_plots(freq,int)
-	
-#update_specS updates the scaling, redoes the simulation, and spits everything back out again.
-
-def update_specS(new_specS):
-	
-	global specS,freq,int 
-	
-	specS = new_specS
-	
-	freq,int = run_sim(frequency,intensity,T,dV,specS)
-	
-	make_plots(freq,int)
-	
-#update_vlsr updates the vlsr, redoes the simulation, and spits everything back out again.
-
-def update_vlsr(new_vlsr):
-	
-	global vlsr,freq,int,frequency
-	
-	vlsr = new_vlsr
-	
-	freq_temp = np.copy(frequency)
-	
-	freq_temp += (-vlsr)*freq_temp/ckm
-	
-	freq,int = run_sim(freq_temp,intensity,T,dV,specS)
-	
-	make_plots(freq,int)			
-	
-	
-
 #############################################################
 #							Run Program						#
 #############################################################
@@ -768,13 +600,8 @@ if args.ll or args.ul:
 
 catalog = splice_array(raw_array)
 
-frequency = np.empty_like(catalog[0])
-
-for x in range(len(frequency)):
-
-	frequency[x] = catalog[0][x]
-
-logint = catalog[2]
+frequency = np.copy(catalog[0])
+logint = np.copy(catalog[2])
 qn7 = np.asarray(catalog[14])
 qn8 = np.asarray(catalog[15])
 qn9 = np.asarray(catalog[16])
@@ -791,7 +618,7 @@ qns = det_qns(qn7,qn8,qn9,qn10,qn11,qn12) #figure out how many qns we have for t
 
 intensity = convert_int(logint)
 
-if args.lsr:
+if args.vlsr:
 
 	frequency += (-vlsr)*frequency/ckm
 
@@ -827,7 +654,38 @@ if args.write:
 
 	write_spectrum(freq,int,output_file)
 
-make_plots(freq,int)
+if args.noplot:
+
+	quit()
+
+plt.ion()	
+	
+fig = plt.figure()
+ax = fig.add_subplot(111)
+
+minorLocator = AutoMinorLocator(5)
+plt.xlabel('Frequency (MHz)')
+plt.ylabel('Intensity (Probably Arbitrary)')
+
+plt.locator_params(nbins=4) #Use only 4 actual numbers on the x-axis
+ax.xaxis.set_minor_locator(minorLocator) #Let the program calculate some minor ticks from that
+	
+ax.get_xaxis().get_major_formatter().set_scientific(False) #Don't let the x-axis go into scientific notation
+ax.get_xaxis().get_major_formatter().set_useOffset(False)
+
+if args.gauss == False:
+
+	line1, = ax.vlines(freq,0,int,linestyle = '-',color = 'red') #Plot sticks from TA down to 0 at each point in freq.
+	
+else:
+	
+	line1, = ax.plot(freq,int,color = 'red')	
+	
+if args.spec:
+
+	line2, = ax.plot(freq_obs,int_obs,color = 'black')
+
+fig.canvas.draw()	
 	
 print('For a list of available commands, type \'help.\'')
 
@@ -868,65 +726,106 @@ while quit_con == False:
 		
 	elif 't' in choice[0]:
 	
-		plt.close()
-	
 		try:
-			new_temp = float(choice.split()[1])
+			T = float(choice.split()[1])
 		except IndexError:
 			try:
-				new_temp = float(choice[1:])
+				T = float(choice[1:])
 			except:
 				print('Unrecognized command.  Type \'help\' for a list of commands.')
 		
-		update_T(new_temp)
+		freq,int = run_sim(frequency,intensity,T,dV,specS)
+		
+		line1.set_ydata(int)
+		line1.set_xdata(freq)
+		
+		fig.canvas.draw()
 		
 	elif 'dv' in choice:
 	
-		plt.close()
-	
 		try:
-			new_dV = float(choice.split()[1])
+			dV = float(choice.split()[1])
 		except IndexError:
 			try:
-				new_dV = float(choice[1:])
+				dV = float(choice[1:])
 			except:
 				print('Unrecognized command.  Type \'help\' for a list of commands.')
 		
-		update_dV(new_dV)
+		freq,int = run_sim(frequency,intensity,T,dV,specS)
+		
+		line1.set_ydata(int)
+		line1.set_xdata(freq)
+		
+		fig.canvas.draw()
 		
 	elif 's' in choice[0]:
-	
-		plt.close()
 		
 		try:
-			new_specS = float(choice.split()[1])
+			specS = float(choice.split()[1])
 		except IndexError:
 			try:
-				new_specS = float(choice[1:])
+				specS = float(choice[1:])
 			except:
 				print('Unrecognized command.  Type \'help\' for a list of commands.')
 		
-		update_specS(new_specS)
+		freq,int = run_sim(frequency,intensity,T,dV,specS)
+		
+		line1.set_ydata(int)
+		line1.set_xdata(freq)
+		
+		fig.canvas.draw()
 		
 	elif 'v' in choice[0]:
 	
-		plt.close()
-	
 		try:
-			new_vlsr = float(choice.split()[1])
+			vlsr = float(choice.split()[1])
 		except IndexError:
 			try:
-				new_vlsr = float(choice[1:])
+				vlsr = float(choice[1:])
 			except:
 				print('Unrecognized command.  Type \'help\' for a list of commands.')
+				
+		frequency = np.copy(catalog[0])
 		
-		update_vlsr(new_vlsr)		
+		frequency += (-vlsr)*frequency/ckm		
+		
+		freq,int = run_sim(frequency,intensity,T,dV,specS)
+		
+		line1.set_ydata(int)
+		line1.set_xdata(freq)
+		
+		fig.canvas.draw()	
 		
 	elif 'g' in choice[0]:
 	
-		plt.close()
-		
-		make_plots(freq,int)	
+		plt.ion()	
+	
+		fig = plt.figure()
+		ax = fig.add_subplot(111)
+
+		minorLocator = AutoMinorLocator(5)
+		plt.xlabel('Frequency (MHz)')
+		plt.ylabel('Intensity (Probably Arbitrary)')
+
+		plt.locator_params(nbins=4) #Use only 4 actual numbers on the x-axis
+		ax.xaxis.set_minor_locator(minorLocator) #Let the program calculate some minor ticks from that
+	
+		ax.get_xaxis().get_major_formatter().set_scientific(False) #Don't let the x-axis go into scientific notation
+		ax.get_xaxis().get_major_formatter().set_useOffset(False)
+
+		if args.gauss == False:
+
+			line1, = ax.vlines(freq,0,int,linestyle = '-',color = 'red') #Plot sticks from TA down to 0 at each point in freq.
+	
+		else:
+	
+			line1, = ax.plot(freq,int,color = 'red')	
+	
+		if args.spec:
+
+			line2, = ax.plot(freq_obs,int_obs,color = 'black')
+
+		fig.canvas.draw()			
 		
 	elif 'w' in choice[0]:
 	

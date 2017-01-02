@@ -22,6 +22,15 @@
 #############################################################
 
 import os, sys, argparse, math
+
+#Python version check
+
+if sys.version_info.major != 3:
+
+	print("This code is written in Python 3.  It will not execute in Python 2.7.  Exiting.")
+	
+	quit()
+
 import numpy as np
 from numpy import exp as exp
 import time

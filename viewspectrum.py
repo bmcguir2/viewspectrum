@@ -104,34 +104,33 @@ def read_cat(catalog_file):
 	
 #trim_raw_array takes the raw_array and trims it at the specified ll and ul
 
-def trim_raw_array(raw_array):
+def trim_raw_array(x):
 
 	'''
 	takes the raw array and trims it at the specified ll and ul
 	'''
 
-	tmp_array = np.arange(len(raw_array),dtype=np.float)	#create a temporary array to splice out the frequency
+	tmp_array = np.arange(len(x),dtype=np.float)	#create a temporary array to splice out the frequency
 	
-	for line in range(len(raw_array)):
+	for line in range(len(x)):
 	
-		tmp_array[line] = float(str(raw_array[line][:13]).strip())
+		tmp_array[line] = float(str(x[line][:13]).strip())
 		
-	i = np.where(tmp_array > ll)[0][0]		#get the index of the first value above the lower limit
+	
+	try:
+		i = np.where(tmp_array > ll)[0][0]	#get the index of the first value above the lower limit
+	except IndexError:
+		i = 0								#if the catalog begins after the lower limit
 	try:
 		i2 = np.where(tmp_array > ul)[0][0]	#get the index of the first value above the upper limit
 	except IndexError:
 		i2 = len(tmp_array)					#if the catalog ends before the upper limit is reached
 		
-	else:
-	
-		print('You somehow invoked trim_raw_array, but ll and ul are gone.  Stop that.')
-		return
-		
 	trimmed_array = []
 
-	for x in range(i,i2):
+	for y in range(i,i2):
 	
-		trimmed_array.append(raw_array[x])
+		trimmed_array.append(x[y])
 		
 	return trimmed_array				
 	
@@ -253,91 +252,91 @@ def fix_qn(qnarray,line,old_qn):
 	
 # splices the catalog file appropriately, then populates a numpy array with the data
 
-def splice_array(raw_array):
+def splice_array(x):
 
 	'''
 	splices the catalog file appropriately, then populates a numpy array with the data
 	'''
 
-	frequency = np.arange(len(raw_array),dtype=np.float)
-	error = np.arange(len(raw_array),dtype=np.float)
-	logint = np.arange(len(raw_array),dtype=np.float)
-	dof = np.arange(len(raw_array),dtype=np.int)
-	elower = np.arange(len(raw_array),dtype=np.float)
-	gup = np.arange(len(raw_array),dtype=np.int)
-	tag = np.arange(len(raw_array),dtype=np.int)
-	qnformat = np.arange(len(raw_array),dtype=np.int)
-	qn1 = np.arange(len(raw_array),dtype=object)
-	qn2 = np.empty(len(raw_array),dtype=object)
-	qn3 = np.empty(len(raw_array),dtype=object)
-	qn4 = np.empty(len(raw_array),dtype=object)
-	qn5 = np.empty(len(raw_array),dtype=object)
-	qn6 = np.empty(len(raw_array),dtype=object)
-	qn7 = np.empty(len(raw_array),dtype=object)
-	qn8 = np.empty(len(raw_array),dtype=object)
-	qn9 = np.empty(len(raw_array),dtype=object)
-	qn10 = np.empty(len(raw_array),dtype=object)
-	qn11 = np.empty(len(raw_array),dtype=object)
-	qn12 = np.empty(len(raw_array),dtype=object)
+	frequency = np.arange(len(x),dtype=np.float)
+	error = np.arange(len(x),dtype=np.float)
+	logint = np.arange(len(x),dtype=np.float)
+	dof = np.arange(len(x),dtype=np.int)
+	elower = np.arange(len(x),dtype=np.float)
+	gup = np.arange(len(x),dtype=np.int)
+	tag = np.arange(len(x),dtype=np.int)
+	qnformat = np.arange(len(x),dtype=np.int)
+	qn1 = np.arange(len(x),dtype=object)
+	qn2 = np.empty(len(x),dtype=object)
+	qn3 = np.empty(len(x),dtype=object)
+	qn4 = np.empty(len(x),dtype=object)
+	qn5 = np.empty(len(x),dtype=object)
+	qn6 = np.empty(len(x),dtype=object)
+	qn7 = np.empty(len(x),dtype=object)
+	qn8 = np.empty(len(x),dtype=object)
+	qn9 = np.empty(len(x),dtype=object)
+	qn10 = np.empty(len(x),dtype=object)
+	qn11 = np.empty(len(x),dtype=object)
+	qn12 = np.empty(len(x),dtype=object)
 
-	for line in range(len(raw_array)):
+	for line in range(len(x)):
 	
-		frequency[line] = float(str(raw_array[line][:13]).strip())
-		error[line] = float(str(raw_array[line][13:21]).strip())
-		logint[line] = float(str(raw_array[line][21:29]).strip())
-		dof[line] = int(str(raw_array[line][29:31]).strip())
-		elower[line] = float(str(raw_array[line][31:41]).strip())
-		gup[line] = int(str(raw_array[line][41:44]).strip())
-		tag[line] = int(str(raw_array[line][44:51]).strip())
-		qnformat[line] = int(str(raw_array[line][51:55]).strip())
+		frequency[line] = float(str(x[line][:13]).strip())
+		error[line] = float(str(x[line][13:21]).strip())
+		logint[line] = float(str(x[line][21:29]).strip())
+		dof[line] = int(str(x[line][29:31]).strip())
+		elower[line] = float(str(x[line][31:41]).strip())
+		gup[line] = int(str(x[line][41:44]).strip())
+		tag[line] = int(str(x[line][44:51]).strip())
+		qnformat[line] = int(str(x[line][51:55]).strip())
 		try:
-			qn1[line] = int(raw_array[line][55:57]) if str(raw_array[line][54:57]).strip() else ''
+			qn1[line] = int(x[line][55:57]) if str(x[line][54:57]).strip() else ''
 		except ValueError:
-			fix_qn(qn1,line,str(raw_array[line][55:57]))	
+			fix_qn(qn1,line,str(x[line][55:57]))	
 		try:		
-			qn2[line] = int(raw_array[line][57:59]) if str(raw_array[line][57:59]).strip() else ''
+			qn2[line] = int(x[line][57:59]) if str(x[line][57:59]).strip() else ''
 		except ValueError:
-			fix_qn(qn2,line,str(raw_array[line][57:59]))
+			fix_qn(qn2,line,str(x[line][57:59]))
 		try:				
-			qn3[line] = int(raw_array[line][59:61]) if str(raw_array[line][59:61]).strip() else ''
+			qn3[line] = int(x[line][59:61]) if str(x[line][59:61]).strip() else ''
 		except ValueError:
-			fix_qn(qn3,line,str(raw_array[line][59:61]))
+			fix_qn(qn3,line,str(x[line][59:61]))
 		try:
-			qn4[line] = int(raw_array[line][61:63]) if str(raw_array[line][61:63]).strip() else ''
+			qn4[line] = int(x[line][61:63]) if str(x[line][61:63]).strip() else ''
 		except ValueError:
-			fix_qn(qn4,line,str(raw_array[line][61:63]))
+			fix_qn(qn4,line,str(x[line][61:63]))
 		try:
-			qn5[line] = int(raw_array[line][63:65]) if str(raw_array[line][63:65]).strip() else ''
+			qn5[line] = int(x[line][63:65]) if str(x[line][63:65]).strip() else ''
 		except ValueError:
-			fix_qn(qn5,line,str(raw_array[line][63:65]))
+			fix_qn(qn5,line,str(x[line][63:65]))
 		try:
-			qn6[line] = int(raw_array[line][65:67]) if str(raw_array[line][65:67]).strip() else ''
+			qn6[line] = int(x[line][65:67]) if str(x[line][65:67]).strip() else ''
 		except ValueError:
-			fix_qn(qn6,line,str(raw_array[line][65:67]))
+			fix_qn(qn6,line,str(x[line][65:67]))
 		try:
-			qn7[line] = int(raw_array[line][67:69]) if str(raw_array[line][67:69]).strip() else ''
+			qn7[line] = int(x[line][67:69]) if str(x[line][67:69]).strip() else ''
 		except ValueError:
-			fix_qn(qn7,line,str(raw_array[line][67:69]))
+			fix_qn(qn7,line,str(x[line][67:69]))
 		try:
-			qn8[line] = int(raw_array[line][69:71]) if str(raw_array[line][69:71]).strip() else ''
+			qn8[line] = int(x[line][69:71]) if str(x[line][69:71]).strip() else ''
 		except ValueError:
-			fix_qn(qn8,line,str(raw_array[line][69:71]))
+			fix_qn(qn8,line,str(x[line][69:71]))
 		try:
-			qn9[line] = int(raw_array[line][71:73]) if str(raw_array[line][71:73]).strip() else ''
+			qn9[line] = int(x[line][71:73]) if str(x[line][71:73]).strip() else ''
 		except ValueError:
-			fix_qn(qn9,line,str(raw_array[line][71:73]))
+			fix_qn(qn9,line,str(x[line][71:73]))
 		try:
-			qn10[line] = int(raw_array[line][73:75]) if str(raw_array[line][73:75]).strip() else ''
+			qn10[line] = int(x[line][73:75]) if str(x[line][73:75]).strip() else ''
 		except ValueError:
-			fix_qn(qn10,line,str(raw_array[line][73:75]))
+			fix_qn(qn10,line,str(x[line][73:75]))
 		try:
-			qn11[line] = int(raw_array[line][75:77]) if str(raw_array[line][75:77]).strip() else ''
+			qn11[line] = int(x[line][75:77]) if str(x[line][75:77]).strip() else ''
 		except ValueError:
-			fix_qn(qn11,line,str(raw_array[line][75:77]))
+			fix_qn(qn11,line,str(x[line][75:77]))
 		try:
-			qn12[line] = int(raw_array[line][77:]) if str(raw_array[line][77:]).strip() else ''
+			qn12[line] = int(x[line][77:]) if str(x[line][77:]).strip() else ''
 		except ValueError:
-			fix_qn(qn12,line,str(raw_array[line][77:]))		
+			fix_qn(qn12,line,str(x[line][77:]))		
 			
 
 	return frequency,error,logint,dof,elower,gup,tag,qnformat,qn1,qn2,qn3,qn4,qn5,qn6,qn7,qn8,qn9,qn10,qn11,qn12
@@ -565,8 +564,24 @@ def sim_gaussian(int_sim,frequency,linewidth):
 	int_gauss = [0] * len(freq_gauss)
 	
 	freq_gauss.sort()
+	
+	start_time = time.time()
+	
+	alerted = False
 
 	for x in range(int_sim.shape[0]):
+	
+		telapsed = time.time() - start_time
+		
+		if telapsed > 5 and alerted == False:
+		
+			tstep = telapsed/x
+			
+			ttotal = (tstep * int_sim.shape[0])/60
+		
+			print('You have asked for a computationally-expensive simulation.  Either wait for it to finish, or narrow up your frequency range by setting ll or ul.  A (probably very poor) estimation of the time remaining is: {:.2f} minutes.' .format(ttotal))
+			
+			alerted = True 
 	
 		l_f = linewidth*frequency[x]/3E5 #get the FWHM in MHz
 	
@@ -801,6 +816,8 @@ def make_plot():
 
 	fig.canvas.draw()
 	
+	save_results('last.results')
+	
 #obs_off turns off the observations
 	
 def obs_off():
@@ -879,6 +896,8 @@ def close():
 	
 	plt.close()	
 	
+	save_results('last.results')
+	
 #store saves the current simulation parameters for recall later.  *Not* saved as a Gaussian. 'x' must be entered as a string with quotes.
 
 def store(x):
@@ -887,13 +906,15 @@ def store(x):
 	saves the current simulation parameters for recall later.  *Not* saved as a Gaussian. 'x' must be entered as a string with quotes.
 	'''
 
-	setup()
+	load_mol(catalog_file)
 	
 	intensity = convert_int(logint)
 	
 	freq_sim,int_sim = run_sim(frequency,intensity,T,dV,S)
 	
-	sim[x] = Molecule(x,catalog_file,elower,eupper,qns,logint,qn7,qn8,qn9,qn10,qn11,qn12,S,dV,T,vlsr,frequency,freq_sim,intensity,int_sim) 
+	sim[x] = Molecule(x,catalog_file,elower,eupper,qns,logint,qn7,qn8,qn9,qn10,qn11,qn12,S,dV,T,vlsr,frequency,freq_sim,intensity,int_sim)
+	
+	save_results('last.results') 
 	
 #recall wipes the current simulation and re-loads a previous simulation that was stored with store(). 'x' must be entered as a string with quotes. This will close the currently-open plot.
 
@@ -902,6 +923,8 @@ def recall(x):
 	'''
 	wipes the current simulation and re-loads a previous simulation that was stored with store(). 'x' must be entered as a string with quotes. This will close the currently-open plot.
 	'''
+
+	save_results('last.results')
 
 	global elower,eupper,qns,logint,qn7,qn8,qn9,qn10,qn11,qn12,S,dV,T,vlsr,frequency,freq_sim,intensity,int_sim,current
 	
@@ -957,6 +980,8 @@ def overplot(x):
 	
 	freq_sim = freq_temp
 	int_sim = int_temp
+	
+	save_results('last.results')
 		
 #load_mol loads a new molecule into the system.  Make sure to store the old molecule simulation first, if you want to get it back.  The current graph will be updated with the new molecule.  Catalog file must be given as a string, without the *.cat as usual.  Simulation will begin with the same T, dV, S, vlsr as previous, so change those first if you want.
 
@@ -974,9 +999,9 @@ def load_mol(x):
 	
 	raw_array = read_cat(catalog_file)
 
-	raw_array = trim_raw_array(raw_array)
+	trimmed_array = trim_raw_array(raw_array)
 
-	catalog = splice_array(raw_array)
+	catalog = splice_array(trimmed_array)
 
 	frequency = np.copy(catalog[0])
 	logint = np.copy(catalog[2])
@@ -1014,6 +1039,8 @@ def load_mol(x):
 	except:
 	
 		make_plot()
+	
+	save_results('last.results')
 
 #save_results prints out a file with all of the parameters for each molecule *which has been stored.*  It will not print the active molecule unless it has been stored. 'x' must be a string, and the output will go to there.
 

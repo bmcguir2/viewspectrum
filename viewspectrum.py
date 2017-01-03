@@ -84,6 +84,10 @@ gauss = True #toggle for simulating Gaussians or a stick spectrum.  Default is T
 
 def read_cat(catalog_file):
 
+	'''
+	Reads in a catalog file line by line
+	'''
+
 	my_array = []
 
 	try:
@@ -101,6 +105,10 @@ def read_cat(catalog_file):
 #trim_raw_array takes the raw_array and trims it at the specified ll and ul
 
 def trim_raw_array(raw_array):
+
+	'''
+	takes the raw array and trims it at the specified ll and ul
+	'''
 
 	tmp_array = np.arange(len(raw_array),dtype=np.float)	#create a temporary array to splice out the frequency
 	
@@ -130,6 +138,10 @@ def trim_raw_array(raw_array):
 #fix_qn fixes quantum number issues
 
 def fix_qn(qnarray,line,old_qn):
+
+	'''
+	fixes quantum number issues arising from the use of alphabet characters to represent numbers in spcat
+	'''
 
 	new_qn = 000
 			
@@ -243,6 +255,10 @@ def fix_qn(qnarray,line,old_qn):
 
 def splice_array(raw_array):
 
+	'''
+	splices the catalog file appropriately, then populates a numpy array with the data
+	'''
+
 	frequency = np.arange(len(raw_array),dtype=np.float)
 	error = np.arange(len(raw_array),dtype=np.float)
 	logint = np.arange(len(raw_array),dtype=np.float)
@@ -330,6 +346,10 @@ def splice_array(raw_array):
 
 def det_qns(qn7,qn8,qn9,qn10,qn11,qn12):
 
+	'''
+	determines how many qns represent each state
+	'''
+	
 	qns = 1
 	
 	try:
@@ -367,6 +387,10 @@ def det_qns(qn7,qn8,qn9,qn10,qn11,qn12):
 #calc_q will dynamically calculate a partition function whenever needed at a given T.  The catalog file used must have enough lines in it to fully capture the partition function, or the result will not be accurate for Q.
 	
 def calc_q(qns,elower,qn7,qn8,qn9,qn10,qn11,qn12,T):
+
+	'''
+	Dynamically calculates a partition function whenever needed at a given T.  The catalog file used must have enough lines in it to fully capture the partition function, or the result will not be accurate for Q.  This is perfectly fine for the *relative* intensities of lines for a given molecule used by this program.  However, absolute intensities between molecules are not remotely accurate.  
+	'''
 
 	Q = np.float64(0.0) #Initialize a float for the partition function
 	
@@ -487,6 +511,10 @@ def calc_q(qns,elower,qn7,qn8,qn9,qn10,qn11,qn12,T):
 
 def scale_temp(int_sim,qns,elower,qn7,qn8,qn9,qn10,qn11,qn12,T,CT):
 
+	'''
+	Converts linear intensities at one temperature to another.
+	'''
+
 	scaled_int = np.empty_like(int_sim)
 	
 	Q_T = calc_q(qns,elower,qn7,qn8,qn9,qn10,qn11,qn12,T)
@@ -500,6 +528,10 @@ def scale_temp(int_sim,qns,elower,qn7,qn8,qn9,qn10,qn11,qn12,T,CT):
 
 def convert_int(logint):
 
+	'''
+	Converts catalog logarithmic intensity units to linear ones
+	'''
+
 	intensity = np.empty_like(logint)	
 	
 	intensity = 10**(logint)
@@ -509,6 +541,10 @@ def convert_int(logint):
 #simulates Gaussian profiles after intensities are simulated.
 
 def sim_gaussian(int_sim,frequency,linewidth):
+
+	'''
+	Simulates Gaussian profiles for lines, after the intensities have been calculated.  Tries to be smart with how large a range it simulates over, for computational resources.  Includes a thermal cutoff for optically-thick lines.
+	'''
 	
 	freq_gauss = []
 
@@ -545,6 +581,10 @@ def sim_gaussian(int_sim,frequency,linewidth):
 #write_spectrum writes out the current freq and intensity to output_file
 
 def write_spectrum(output_file):
+
+	'''
+	Will write out the currently-active simulation frequency and intensity to output_file (which must be given as a string).  
+	'''
 
 	if gauss == True:
 	
@@ -586,6 +626,10 @@ def write_spectrum(output_file):
 
 def run_sim(frequency,intensity,T,dV,S):
 
+	'''
+	Runs a full simulation accounting for the currently-active T, dV, S, and vlsr values, as well as any thermal cutoff for optically-thick lines
+	'''
+
 	int_temp = scale_temp(intensity,qns,elower,qn7,qn8,qn9,qn10,qn11,qn12,T,CT)
 
 	int_temp *= S
@@ -605,6 +649,10 @@ def run_sim(frequency,intensity,T,dV,S):
 #mod_T changes the temperature, re-simulates, and re-plots	
 	
 def modT(x):
+
+	'''
+	Modifies the temperature value of the current simulation to the value given
+	'''
 
 	try:
 		float(x)
@@ -627,6 +675,10 @@ def modT(x):
 
 def modS(x):
 
+	'''
+	Modifies the scaling value of the current simulation to the value given
+	'''
+
 	try:
 		float(x)
 	except:
@@ -648,6 +700,10 @@ def modS(x):
 
 def moddV(x):
 
+	'''
+	Modifies the dV value of the current simulation to the value given
+	'''
+
 	try:
 		float(x)
 	except:
@@ -668,6 +724,10 @@ def moddV(x):
 #modVLSR changes the LSR velocity, re-simulates, and re-plots
 
 def modVLSR(x):
+
+	'''
+	Modifies the vlsr value of the current simulation to the value given
+	'''
 
 	try:
 		float(x)
@@ -694,11 +754,19 @@ def modVLSR(x):
 
 def modV(vlsr):
 
+	'''
+	Modifies the vlsr value of the current simulation to the value given
+	'''
+
 	modVLSR(vlsr)	
 	
 #make_plot makes the plot!
 
 def make_plot():
+
+	'''
+	Generates a plot of the currently-active molecular simulation, as well as any laboratory data or observations which are loaded.  This will *not* restore any overplots from a previously-closed plot.
+	'''
 
 	global fig,ax,line1,line2,freq_sim,intensity,int_sim
 	
@@ -737,6 +805,10 @@ def make_plot():
 	
 def obs_off():
 
+	'''
+	turns off the laboratory data or observations on the plot
+	'''
+
 	if spec == None:
 	
 		print('There are no observations to turn off!')
@@ -750,6 +822,10 @@ def obs_off():
 #obs_on turns on the observations
 	
 def obs_on():
+
+	'''
+	turns on the laboratory data or observations on the plot
+	'''
 
 	if spec == None:
 	
@@ -769,43 +845,13 @@ def obs_on():
 		
 		fig.canvas.draw()	
 	
-# setup runs the initial setup for a molecule
-# 
-# def setup():
-# 
-# 	raw_array = read_cat(catalog_file)
-# 
-# 	raw_array = trim_raw_array(raw_array)
-# 
-# 	catalog = splice_array(raw_array)
-# 
-# 	frequency = np.copy(catalog[0])
-# 	logint = np.copy(catalog[2])
-# 	qn7 = np.asarray(catalog[14])
-# 	qn8 = np.asarray(catalog[15])
-# 	qn9 = np.asarray(catalog[16])
-# 	qn10 = np.asarray(catalog[17])
-# 	qn11 = np.asarray(catalog[18])
-# 	qn12 = np.asarray(catalog[19])
-# 	elower = np.asarray(catalog[4])
-# 
-# 	eupper = np.empty_like(elower)
-# 
-# 	eupper = elower + frequency/29979.2458
-# 
-# 	qns = det_qns(qn7,qn8,qn9,qn10,qn11,qn12) #figure out how many qns we have for the molecule
-# 
-# 	intensity = convert_int(logint)
-# 	
-# 	if spec:
-# 	
-# 		freq_obs,int_obs = read_obs()
-# 
-# 	return frequency,logint,qn7,qn8,qn9,qn10,qn11,qn12,elower,eupper,intensity,qns,catalog
-	
 #read_obs reads in observations or laboratory spectra and populates freq_obs and int_obs
 
 def read_obs(x):
+
+	'''
+	reads in observations or laboratory spectra and populates freq_obs and int_obs
+	'''
 
 	global spec
 
@@ -837,6 +883,10 @@ def close():
 
 def store(x):
 
+	'''
+	saves the current simulation parameters for recall later.  *Not* saved as a Gaussian. 'x' must be entered as a string with quotes.
+	'''
+
 	setup()
 	
 	intensity = convert_int(logint)
@@ -848,6 +898,10 @@ def store(x):
 #recall wipes the current simulation and re-loads a previous simulation that was stored with store(). 'x' must be entered as a string with quotes. This will close the currently-open plot.
 
 def recall(x):
+
+	'''
+	wipes the current simulation and re-loads a previous simulation that was stored with store(). 'x' must be entered as a string with quotes. This will close the currently-open plot.
+	'''
 
 	global elower,eupper,qns,logint,qn7,qn8,qn9,qn10,qn11,qn12,S,dV,T,vlsr,frequency,freq_sim,intensity,int_sim,current
 	
@@ -879,6 +933,10 @@ def recall(x):
 
 def overplot(x):
 
+	'''
+	overplots a previously-stored simulation on the current plot in a color other than red, but does not touch the simulation active in the main program. 'x' must be entered as a string with quotes.
+	'''
+
 	global elower,eupper,qns,logint,qn7,qn8,qn9,qn10,qn11,qn12,S,dV,T,vlsr,frequency,freq_sim,intensity,int_sim,current,fig,ax
 
 	#store the currently-active simulation in a temporary holding cell
@@ -903,6 +961,10 @@ def overplot(x):
 #load_mol loads a new molecule into the system.  Make sure to store the old molecule simulation first, if you want to get it back.  The current graph will be updated with the new molecule.  Catalog file must be given as a string, without the *.cat as usual.  Simulation will begin with the same T, dV, S, vlsr as previous, so change those first if you want.
 
 def load_mol(x):
+
+	'''
+	loads a new molecule into the system.  Make sure to store the old molecule simulation first, if you want to get it back.  The current graph will be updated with the new molecule.  Catalog file must be given as a string, without the *.cat as usual.  Simulation will begin with the same T, dV, S, vlsr as previous, so change those first if you want.
+	'''
 
 	global frequency,logint,qn7,qn8,qn9,qn10,qn11,qn12,elower,eupper,intensity,qns,catalog,catalog_file,fig,current,line1,line2,fig,ax
 	

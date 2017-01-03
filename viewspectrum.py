@@ -756,10 +756,18 @@ def obs_on():
 		print('There are no observations to turn on!')
 		return	
 		
-	line2.set_xdata(freq_obs)
-	line2.set_ydata(int_obs)
+	try:
+	
+		line2.set_xdata(freq_obs)
+		line2.set_ydata(int_obs)
 			
-	fig.canvas.draw()	
+		fig.canvas.draw()
+		
+	except:
+	
+		line2, = ax.plot(freq_obs,int_obs,color = 'black')
+		
+		fig.canvas.draw()	
 	
 # setup runs the initial setup for a molecule
 # 
@@ -797,9 +805,13 @@ def obs_on():
 	
 #read_obs reads in observations or laboratory spectra and populates freq_obs and int_obs
 
-def read_obs():
+def read_obs(x):
 
-	obs = read_cat(spec)
+	global spec
+
+	spec = x
+
+	obs = read_cat(x)
 	
 	global freq_obs,int_obs
 
@@ -809,7 +821,17 @@ def read_obs():
 	for x in range(len(obs)):
 
 		freq_obs.append(float(obs[x].split()[0]))
-		int_obs.append(float(obs[x].split()[1].strip('\n')))	
+		int_obs.append(float(obs[x].split()[1].strip('\n')))
+		
+#close closes the currently open plot
+
+def close():
+
+	'''
+	Closes the currently open plot window.
+	'''
+	
+	plt.close()	
 	
 #store saves the current simulation parameters for recall later.  *Not* saved as a Gaussian. 'x' must be entered as a string with quotes.
 
@@ -857,7 +879,7 @@ def recall(x):
 
 def overplot(x):
 
-	global elower,eupper,qns,logint,qn7,qn8,qn9,qn10,qn11,qn12,S,dV,T,vlsr,frequency,freq_sim,intensity,int_sim,current
+	global elower,eupper,qns,logint,qn7,qn8,qn9,qn10,qn11,qn12,S,dV,T,vlsr,frequency,freq_sim,intensity,int_sim,current,fig,ax
 
 	#store the currently-active simulation in a temporary holding cell
 
@@ -882,33 +904,76 @@ def overplot(x):
 
 def load_mol(x):
 
-	global frequency,logint,qn7,qn8,qn9,qn10,qn11,qn12,elower,eupper,intensity,qns,catalog,catalog_file
+	global frequency,logint,qn7,qn8,qn9,qn10,qn11,qn12,elower,eupper,intensity,qns,catalog,catalog_file,fig,current,line1,line2,fig,ax
+	
+	current = x
 	
 	catalog_file = x
 	
-	frequency,logint,qn7,qn8,qn9,qn10,qn11,qn12,elower,eupper,intensity,qns,catalog = setup()
+	raw_array = read_cat(catalog_file)
+
+	raw_array = trim_raw_array(raw_array)
+
+	catalog = splice_array(raw_array)
+
+	frequency = np.copy(catalog[0])
+	logint = np.copy(catalog[2])
+	qn7 = np.asarray(catalog[14])
+	qn8 = np.asarray(catalog[15])
+	qn9 = np.asarray(catalog[16])
+	qn10 = np.asarray(catalog[17])
+	qn11 = np.asarray(catalog[18])
+	qn12 = np.asarray(catalog[19])
+	elower = np.asarray(catalog[4])
+
+	eupper = np.empty_like(elower)
+
+	eupper = elower + frequency/29979.2458
+
+	qns = det_qns(qn7,qn8,qn9,qn10,qn11,qn12) #figure out how many qns we have for the molecule
+
+	intensity = convert_int(logint)
+	
+	if spec:
+	
+		read_obs(spec)
 	
 	frequency += (-vlsr)*frequency/ckm
 	
 	freq_sim,int_sim=run_sim(frequency,intensity,T,dV,S)
 	
-	line1.set_ydata(int_sim)
-	line1.set_xdata(freq_sim)
+	try:
 	
-	fig.canvas.draw()
+		line1.set_ydata(int_sim)
+		line1.set_xdata(freq_sim)
+	
+		fig.canvas.draw()
+		
+	except:
+	
+		make_plot()
 
 #save_results prints out a file with all of the parameters for each molecule *which has been stored.*  It will not print the active molecule unless it has been stored. 'x' must be a string, and the output will go to there.
 
 def save_results(x):
 
 	'''
+	save_results prints out a file that contains at the top the output of status(), followed by all of the parameters for each molecule which has been stored.  This file can then be used with restore() to restore the parameter space and keep going.
 	'''
 
 	with open(x, 'w') as output:
 	
-		output.write('ll {}\n' .format(ll))
-		output.write('ul {}\n' .format(ul))
-		output.write('obs {}\n' .format(spec))
+		output.write('Current Molecule or Catalog:\t {}\n' .format(current))
+		output.write('Current lab or observation: \t {}\n' .format(spec))
+		output.write('T: \t {} K\n' .format(T))
+		output.write('S: \t {}\n' .format(S))
+		output.write('dV: \t {} km/s\n' .format(dV))
+		output.write('VLSR: \t {} km/s\n' .format(vlsr))
+		output.write('R: \t {} km/s\n' .format(R))
+		output.write('ll: \t {} MHz\n' .format(ll))
+		output.write('ul: \t {} MHz\n' .format(ul))
+		output.write('CT: \t {} K\n' .format(CT))
+		output.write('gauss: \t {}\n\n' .format(gauss))
 	
 		output.write('Molecule \t T(K) \t S \t dV \t vlsr \t catalog_file\n')
 	
@@ -925,6 +990,7 @@ def status():
 	'''
 
 	print('Current Molecule or Catalog:\t {}' .format(current))
+	print('Current lab or observation: \t {}' .format(spec))
 	print('T: \t {} K' .format(T))
 	print('S: \t {}' .format(S))
 	print('dV: \t {} km/s' .format(dV))

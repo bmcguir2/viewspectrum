@@ -39,6 +39,7 @@ import random
 import warnings
 from matplotlib.ticker import AutoMinorLocator
 import matplotlib.pyplot as plt
+import itertools
 #warnings.filterwarnings('error')
 
 version = 3.0
@@ -73,6 +74,8 @@ T = args.T #Rotational temperature
 basename = args.basename.strip('.')
 
 vlsr = 0.0
+
+S = 1
 
 if args.vlsr:
 
@@ -294,7 +297,6 @@ def fix_qn(qnarray,line,old_qn):
 
 def splice_array(raw_array):
 
-	frequency = np.arange(len(raw_array),dtype=np.float)
 	frequency = np.arange(len(raw_array),dtype=np.float)
 	error = np.arange(len(raw_array),dtype=np.float)
 	logint = np.arange(len(raw_array),dtype=np.float)
@@ -535,16 +537,16 @@ def calc_q(qns,elower,qn7,qn8,qn9,qn10,qn11,qn12,T):
 	
 	return Q
 
-#scale_temp scales the intensities to the new temperature
+#scale_temp scales the simulated intensities to the new temperature
 
-def scale_temp(intensity,qns,elower,qn7,qn8,qn9,qn10,qn11,qn12,T,CT):
+def scale_temp(int_sim,qns,elower,qn7,qn8,qn9,qn10,qn11,qn12,T,CT):
 
-	scaled_int = np.empty_like(intensity)
+	scaled_int = np.empty_like(int_sim)
 	
 	Q_T = calc_q(qns,elower,qn7,qn8,qn9,qn10,qn11,qn12,T)
 	Q_CT = calc_q(qns,elower,qn7,qn8,qn9,qn10,qn11,qn12,CT)
 	
-	scaled_int = intensity * (Q_CT/Q_T) * exp(-(((1/T)-(1/CT))*elower)/0.695)
+	scaled_int = int_sim * (Q_CT/Q_T) * exp(-(((1/T)-(1/CT))*elower)/0.695)
 
 	return scaled_int
 
@@ -560,11 +562,11 @@ def convert_int(logint):
 	
 #simulates Gaussian profiles after intensities are simulated.
 
-def sim_gaussian(TA,frequency,linewidth):
+def sim_gaussian(int_sim,frequency,linewidth):
 	
 	freq_gauss = []
 
-	for x in range(TA.shape[0]):
+	for x in range(int_sim.shape[0]):
 	
 		l_f = linewidth*frequency[x]/3E5 #get the FWHM in MHz
 	
@@ -582,13 +584,13 @@ def sim_gaussian(TA,frequency,linewidth):
 	
 	freq_gauss.sort()
 
-	for x in range(TA.shape[0]):
+	for x in range(int_sim.shape[0]):
 	
 		l_f = linewidth*frequency[x]/3E5 #get the FWHM in MHz
 	
 		c = l_f/2.35482
 
-		int_gauss += TA[x]*exp(-((freq_gauss - frequency[x])**2/(2*c**2)))
+		int_gauss += int_sim[x]*exp(-((freq_gauss - frequency[x])**2/(2*c**2)))
 	
 	return(freq_gauss,int_gauss)
 
@@ -636,21 +638,24 @@ def write_spectrum(output_file):
 
 def run_sim(frequency,intensity,T,dV,S):
 
-	freq = frequency
-
 	if args.T:
 
-		intensity = scale_temp(intensity,qns,elower,qn7,qn8,qn9,qn10,qn11,qn12,T,CT)
+		int_sim = scale_temp(intensity,qns,elower,qn7,qn8,qn9,qn10,qn11,qn12,T,CT)
 	
 	if args.S:
 
-		intensity *= S
+		int_sim *= S
 	
 	if args.gauss:
 
-		freq,intensity = sim_gaussian(intensity,frequency,dV)
+		freq_sim,int_sim = sim_gaussian(int_sim,frequency,dV)
 		
-	return freq,intensity
+	else:
+	
+		freq_sim = frequency
+		int_sim = intensity
+		
+	return freq_sim,int_sim
 	
 #mod_T changes the temperature, re-simulates, and re-plots	
 	
@@ -662,14 +667,14 @@ def modT(x):
 		print('x needs to be a number.')
 		return
 		
-	global T
+	global T,freq_sim,int_sim
 		
 	T = float(x)
 		
-	freq,intensity = run_sim(frequency,intensity,T,dV,S)
+	freq_sim,int_sim = run_sim(frequency,intensity,T,dV,S)
 	
-	line1.set_ydata(intensity)
-	line1.set_xdata(freq)
+	line1.set_ydata(int_sim)
+	line1.set_xdata(freq_sim)
 		
 	fig.canvas.draw()
 	
@@ -683,14 +688,14 @@ def modS(x):
 		print('x needs to be a number.')
 		return
 		
-	global S	
+	global S,freq_sim,int_sim
 		
 	S = x
 		
-	freq,intensity = run_sim(frequency,intensity,T,dV,S)
+	freq_sim,int_sim = run_sim(frequency,intensity,T,dV,S)
 	
-	line1.set_ydata(intensity)
-	line1.set_xdata(freq)
+	line1.set_ydata(int_sim)
+	line1.set_xdata(freq_sim)
 		
 	fig.canvas.draw()
 	
@@ -704,14 +709,14 @@ def moddV(x):
 		print('dV needs to be a number.')
 		return
 		
-	global dV
+	global dV,freq_sim,int_sim
 	
 	dV = x
 		
-	freq,intensity = run_sim(frequency,intensity,T,dV,S)
+	freq_sim,int_sim = run_sim(frequency,intensity,T,dV,S)
 	
-	line1.set_ydata(intensity)
-	line1.set_xdata(freq)
+	line1.set_ydata(int_sim)
+	line1.set_xdata(freq_sim)
 		
 	fig.canvas.draw()
 	
@@ -725,7 +730,7 @@ def modVLSR(x):
 		print('vlsr needs to be a number.')
 		return	
 		
-	global vlsr
+	global vlsr,freq_sim,int_sim,frequency
 	
 	vlsr = x
 		
@@ -733,10 +738,10 @@ def modVLSR(x):
 	
 	frequency += (-vlsr)*frequency/ckm		
 	
-	freq,intensity = run_sim(frequency,intensity,T,dV,S)
+	freq_sim,int_sim = run_sim(frequency,intensity,T,dV,S)
 	
-	line1.set_ydata(intensity)
-	line1.set_xdata(freq)
+	line1.set_ydata(int_sim)
+	line1.set_xdata(freq_sim)
 	
 	fig.canvas.draw()		
 
@@ -750,9 +755,9 @@ def modV(vlsr):
 
 def make_plot():
 
-	global fig,ax,line1,line2,freq,intensity
+	global fig,ax,line1,line2,freq_sim,intensity,int_sim
 	
-	freq,intensity=run_sim(frequency,intensity,T,dV,S)
+	freq_sim,int_sim=run_sim(frequency,intensity,T,dV,S)
 
 	plt.ion()	
 
@@ -771,11 +776,11 @@ def make_plot():
 
 	if args.gauss == False:
 
-		line1, = ax.vlines(freq,0,intensity,linestyle = '-',color = 'red') #Plot sticks from TA down to 0 at each point in freq.
+		line1, = ax.vlines(freq_sim,0,int_sim,linestyle = '-',color = 'red') #Plot sticks from TA down to 0 at each point in freq.
 
 	else:
 
-		line1, = ax.plot(freq,intensity,color = 'red')	
+		line1, = ax.plot(freq_sim,int_sim,color = 'red')	
 
 	if args.spec:
 
@@ -836,7 +841,7 @@ def setup():
 
 	intensity = convert_int(logint)
 
-	return frequency,logint,qn7,qn8,qn9,qn10,qn11,qn12,elower,eupper,intensity
+	return frequency,logint,qn7,qn8,qn9,qn10,qn11,qn12,elower,eupper,intensity,qns,catalog
 	
 #read_obs reads in observations or laboratory spectra and populates freq_obs and int_obs
 
@@ -852,7 +857,75 @@ def read_obs():
 		freq_obs.append(obs[x].split()[0])
 		int_obs.append(obs[x].split()[1].strip('\n'))	
 		
-	return freq_obs,int_obs		
+	return freq_obs,int_obs	
+	
+#store saves the current simulation parameters for recall later.  *Not* saved as a Gaussian. 'x' must be entered as a string with quotes.
+
+def store(x):
+
+	setup()
+	
+	intensity = convert_int(logint)
+	
+	freq_sim,int_sim = run_sim(frequency,intensity,T,dV,S)
+	
+	sim[x] = Molecule(x,elower,eupper,qns,logint,qn7,qn8,qn9,qn10,qn11,qn12,S,dV,T,vlsr,frequency,freq_sim,intensity,int_sim) 
+	
+#recall wipes the current simulation and re-loads a previous simulation that was stored with store(). 'x' must be entered as a string with quotes. This will close the currently-open plot.
+
+def recall(x):
+
+	global elower,eupper,qns,logint,qn7,qn8,qn9,qn10,qn11,qn12,S,dV,T,vlsr,frequency,freq_sim,intensity,int_sim,current
+	
+	plt.close()
+
+	current = sim[x].name
+	elower = sim[x].elower
+	eupper = sim[x].eupper
+	qns = sim[x].qns
+	logint = sim[x].logint
+	qn7 = sim[x].qn7
+	qn8 = sim[x].qn8
+	qn9 = sim[x].qn9
+	qn10 = sim[x].qn10
+	qn11 = sim[x].qn11
+	qn12 = sim[x].qn12
+	S = sim[x].S
+	dV = sim[x].dV
+	T = sim[x].T
+	vlsr = sim[x].vlsr
+	frequency = sim[x].frequency
+	freq_sim = sim[x].freq_sim
+	intensity = sim[x].intensity
+	int_sim = sim[x].int_sim
+		
+	make_plot()	
+
+#overplot overplots a previously-stored simulation on the current plot in a color other than red, but does not touch the simulation active in the main program. 'x' must be entered as a string with quotes.
+
+def overplot(x):
+
+	global elower,eupper,qns,logint,qn7,qn8,qn9,qn10,qn11,qn12,S,dV,T,vlsr,frequency,freq_sim,intensity,int_sim,current
+
+	#store the currently-active simulation in a temporary holding cell
+
+	freq_temp = freq_sim 
+	int_temp = int_sim 
+	
+	#pull the old simulation out of storage
+	
+	freq_sim = sim[x].freq_sim
+	int_sim = sim[x].int_sim
+	
+	line_color = next(colors)
+	
+	ax.plot(freq_sim,int_sim,color = line_color)
+	
+	fig.canvas.draw()
+	
+	freq_sim = freq_temp
+	int_sim = int_temp
+		
 
 #############################################################
 #							Classes for Storing Results		#
@@ -860,23 +933,44 @@ def read_obs():
 
 class Molecule(object):
 
-	def __init__(self,name,S,dV,T,vlsr,freq,intensity):
+	def __init__(self,name,elower,eupper,qns,logint,qn7,qn8,qn9,qn10,qn11,qn12,S,dV,T,vlsr,frequency,freq_sim,intensity,int_sim):
 	
 		self.name = name
+		self.elower = elower
+		self.eupper = eupper
+		self.qns = qns
+		self.logint = logint
+		self.qn7 = qn7
+		self.qn8 = qn8
+		self.qn9 = qn9
+		self.qn10 = qn10
+		self.qn11 = qn11
+		self.qn12 = qn12
 		self.S = S
 		self.dV = dV
 		self.T = T
 		self.vlsr = vlsr
-		self.freq = freq
+		self.frequency = frequency
+		self.freq_sim = freq_sim
 		self.intensity = intensity
+		self.int_sim = int_sim
 
 	
 #############################################################
 #							Run Program						#
 #############################################################
 
+sim = {} #dictionary to hold stored simulations
 
-frequency,logint,qn7,qn8,qn9,qn10,qn11,qn12,elower,eupper,intensity = setup()
+lines = {} #dictionary to hold matplotlib lines
+
+current = '{}' .format(basename)
+
+colors = itertools.cycle(['#9400D3','#4B0082','#0000FF','#00FF00','#FFFF00','#FF7F00'])
+
+frequency,logint,qn7,qn8,qn9,qn10,qn11,qn12,elower,eupper,intensity,qns,catalog = setup()
+
+
 
 if args.vlsr:
 

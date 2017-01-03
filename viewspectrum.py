@@ -50,72 +50,30 @@ kcm = 0.69503476 #Boltzmann's constant in cm-1/K
 ckm = 2.998*10**5 #speed of light in km/s
 
 #############################################################
-#							Read Input						#
+#							Defaults 						#
 #############################################################
 
-parser = argparse.ArgumentParser(description='Displays a spectrum from a catalog file at the temperature at which the catalog file was simulated.  Can optionally scale with temperature.  Relative intensities will be accurate - absolute intensities will depend on the completeness of the catalog, which is used to calculate Q.')
-parser.add_argument('basename', help='Catalog file basename of the form: basename.cat  (i.e., do not include .cat)')
-parser.add_argument('-ll', type=float, help='lower frequency limit (MHz)')
-parser.add_argument('-ul', type=float, help='upper frequency limit (MHz)')
-parser.add_argument('-T', type=float, help='Rotational Temperature (K)')
-parser.add_argument('-CT', type=float, help='Temperature catalog file was simulated at. Default is 300 K.')
-parser.add_argument('-G', '--gauss', action='store_true', help='Simulate Gaussians.  Default linewidth is 5 km/s, with a resolution of 0.5 km/s.  Modify this with the -dV and -R options.  Warning: this may take a very, very long time.')
-parser.add_argument('-dV', type=float, help='velocity width for simulated Gaussians in km/s.  Default is 5.')
-parser.add_argument('-R', type=float, help='Resolution for simulated Gaussians in km/s.  Default is 0.5.  Currently does not work.')
-parser.add_argument('-vlsr', type=float, help='Apply a VLSR correction in km/s to the simulated spectrum.')
-parser.add_argument('-spec', type=str, help='Underplot a lab or astronomical spectrum in a given filename.')
-parser.add_argument('-S', type=float, help='An optional intensity scaling factor to apply to the simulation.')
-args = parser.parse_args()
+T = 300 #temperature for simulations.  Default is 300 K.
 
-catalog_file = '{}.cat' .format(args.basename.strip('.')) #Catalog file
-output_file = '{}.spec' .format(args.basename.strip('.')) #Output file
+catalog_file = None #catalog file to load in.  Needs to be a string.
+
+vlsr = 0.0 #vlsr offset applied to simulation.  Default is 0 km/s.
+
+S = 1 #linear scaling factor applied to simulation.  Default is 1.
+
+ll = float('-inf') #lower limit for the simulation range.  Default is none.
+
+ul = float('inf') #upper limit for the simulation range.  Default is none.
+
+spec = None	#file of a laboratory or observational spectrum to load in for comparison.  Default is none.
+
+dV = 5.0 #linewidth of the simulation.  Default is 5.0 km/s.
+
+R = 0.5 #resolution of the simulation if using Gaussians.  Default is 0.5 km/s.
 	
-T = args.T #Rotational temperature
-basename = args.basename.strip('.')
+CT = 300.0 #temperature the catalog is simulated at.  Default is 300 K.
 
-vlsr = 0.0
-
-S = 1
-
-if args.vlsr:
-
-	vlsr = args.vlsr
-
-if args.ll:
-
-	ll = args.ll #lower limit to plot
-
-if args.ul:
-
-	ul = args.ul #upper limit to plot
-
-if args.spec:
-
-	spec = args.spec
-	
-if args.S:
-
-	S = args.S
-
-dV = 5.0
-
-if args.dV:
-
-	dV = args.dV
-	
-R = 0.5
-
-if args.R:
-
-	R = args.R
-
-if args.CT:
-
-	CT = args.CT #Temperature catalog file was simulated at, if not 300 K.
-	
-else:
-
-	CT = 300.0
+gauss = True #toggle for simulating Gaussians or a stick spectrum.  Default is True.
 
 #############################################################
 #							Functions						#
@@ -128,11 +86,15 @@ def read_cat(catalog_file):
 
 	my_array = []
 
-	with open(catalog_file) as input:
+	try:
+		with open(catalog_file) as input:
 	
-		for line in input:
+			for line in input:
 		
-			my_array.append(line)	
+				my_array.append(line)	
+	except TypeError:
+		print('Specify a catalog file with catalog_file = \'x\'')
+		return			
 			
 	return my_array	
 	
@@ -146,32 +108,16 @@ def trim_raw_array(raw_array):
 	
 		tmp_array[line] = float(str(raw_array[line][:13]).strip())
 		
-	if args.ll and args.ul:
-	
-		i = np.where(tmp_array > ll)[0][0]		#get the index of the first value above the lower limit
-		try:
-			i2 = np.where(tmp_array > ul)[0][0]	#get the index of the first value above the upper limit
-		except IndexError:
-			i2 = len(tmp_array)					#if the catalog ends before the upper limit is reached
-			
-	elif args.ll:
-	
-		i = np.where(tmp_array > ll)[0][0]		#get the index of the first value above the lower limit
-		i2 = len(raw_array)						#go to the upper limit of the catalog
-		
-	elif args.ul:
-	
-		i = 0									#start at the beginning of the catalog
-		try:
-			i2 = np.where(tmp_array > ul)[0][0]	#get the index of the first value above the upper limit
-		except IndexError:
-			i2 = len(tmp_array)					#if the catalog ends before the upper limit is reached
+	i = np.where(tmp_array > ll)[0][0]		#get the index of the first value above the lower limit
+	try:
+		i2 = np.where(tmp_array > ul)[0][0]	#get the index of the first value above the upper limit
+	except IndexError:
+		i2 = len(tmp_array)					#if the catalog ends before the upper limit is reached
 		
 	else:
 	
-		print('You somehow invoked trim_raw_array without providing any limits.  Stop that.')
-		
-		quit()
+		print('You somehow invoked trim_raw_array, but ll and ul are gone.  Stop that.')
+		return
 		
 	trimmed_array = []
 
@@ -424,32 +370,32 @@ def calc_q(qns,elower,qn7,qn8,qn9,qn10,qn11,qn12,T):
 
 	Q = np.float64(0.0) #Initialize a float for the partition function
 	
-	if basename=='acetone':
+	if catalog_file=='acetone.cat':
 	
 		Q = 2.91296*10**(-7)*T**6 - 0.00021050085*T**5 + 0.05471337*T**4 - 5.5477*T**3 + 245.28*T**2 - 2728.3*T + 16431 #Hard code for Acetone
 		
-	elif basename=='sh':
+	elif catalog_file=='sh.cat':
 	
 		Q = 0.000000012549467*T**4 - 0.000008528126823*T**3 + 0.002288160909445*T**2 + 0.069272946237033*T + 15.357239728157400
  #Hard code for SH.  Completely unreliable below 2.735 K or above 300 K.
 
-	elif basename=='h2s':
+	elif catalog_file=='h2s.cat':
 	
 		Q = -0.000004859941547*T**3 + 0.005498622332982*T**2 + 0.507648423477309*T - 1.764494755639740 #Hard code for H2S.  Completely unreliable below 2.735 K or above 300 K.
 	
-	elif basename=='hcn':
+	elif catalog_file=='hcn.cat':
 	
 		Q = -1.64946939*10**-9*T**4 + 4.62476813*10**-6*T**3 - 1.15188755*10**-3*T**2 + 1.48629408*T + .386550361
 		
-	elif basename=='hc9n':
+	elif catalog_file=='hc9n.cat':
 	
 		Q = 71.730808*T + 0.040659
 		
-	elif basename=='hc7n':
+	elif catalog_file=='hc7n.cat':
 	
 		Q = 36.949992*T + 0.135605
 		
-	elif basename=='methanol' or basename=='CH3OH' or basename=='ch3oh' or basename=='Methanol':
+	elif catalog_file.lower()=='methanol.cat' or catalog_file.lower()=='ch3oh.cat':
 	
 		Q = 4.83410*10**-11*T**6 - 4.04024*10**-8*T**5 + 1.27624*10**-5*T**4 - 1.83807*10**-3*T**3 + 2.05911*10**-1*T**2 + 4.39632*10**-1*T -1.25670
 		
@@ -591,6 +537,8 @@ def sim_gaussian(int_sim,frequency,linewidth):
 		c = l_f/2.35482
 
 		int_gauss += int_sim[x]*exp(-((freq_gauss - frequency[x])**2/(2*c**2)))
+		
+	int_gauss[int_gauss > thermal] = thermal	
 	
 	return(freq_gauss,int_gauss)
 
@@ -598,39 +546,39 @@ def sim_gaussian(int_sim,frequency,linewidth):
 
 def write_spectrum(output_file):
 
-	if args.gauss:
+	if gauss == True:
 	
-		for h in range(len(freq)):
+		for h in range(len(freq_sim)):
 
 			if (h == 0): #write out the results to a out_file
 			
 				with open(output_file, 'w') as output: 
 					
-					output.write('{} {}\n' .format(freq[0],intensity[0]))
+					output.write('{} {}\n' .format(freq_sim[0],int_sim[0]))
 						
 			else:
 				
 				with open(output_file, 'a') as output:
 					
-					output.write('{} {}\n' .format(freq[h],intensity[h]))
+					output.write('{} {}\n' .format(freq_sim[h],int_sim[h]))
 						
 			h += 1		
 	
 	else:
 	
-		for h in range(freq.shape[0]):
+		for h in range(freq_sim.shape[0]):
 
 			if (h == 0): #write out the results to a out_file
 				
 				with open(output_file, 'w') as output: 
 					
-					output.write('{} {}\n' .format(freq[0],intensity[0]))
+					output.write('{} {}\n' .format(freq_sim[0],int_sim[0]))
 						
 			else:
 				
 				with open(output_file, 'a') as output:
 					
-					output.write('{} {}\n' .format(freq[h],intensity[h]))
+					output.write('{} {}\n' .format(freq_sim[h],int_sim[h]))
 						
 			h += 1				
 
@@ -638,22 +586,19 @@ def write_spectrum(output_file):
 
 def run_sim(frequency,intensity,T,dV,S):
 
-	if args.T:
+	int_temp = scale_temp(intensity,qns,elower,qn7,qn8,qn9,qn10,qn11,qn12,T,CT)
 
-		int_sim = scale_temp(intensity,qns,elower,qn7,qn8,qn9,qn10,qn11,qn12,T,CT)
+	int_temp *= S
 	
-	if args.S:
+	if gauss == True:
 
-		int_sim *= S
-	
-	if args.gauss:
-
-		freq_sim,int_sim = sim_gaussian(int_sim,frequency,dV)
+		freq_sim,int_sim = sim_gaussian(int_temp,frequency,dV)
 		
 	else:
 	
+		int_temp[int_temp > thermal] = thermal
 		freq_sim = frequency
-		int_sim = intensity
+		int_sim = int_temp
 		
 	return freq_sim,int_sim
 	
@@ -773,8 +718,12 @@ def make_plot():
 
 	ax.get_xaxis().get_major_formatter().set_scientific(False) #Don't let the x-axis go into scientific notation
 	ax.get_xaxis().get_major_formatter().set_useOffset(False)
+	
+	if spec:
 
-	if args.gauss == False:
+		line2, = ax.plot(freq_obs,int_obs,color = 'black')
+
+	if gauss == False:
 
 		line1, = ax.vlines(freq_sim,0,int_sim,linestyle = '-',color = 'red') #Plot sticks from TA down to 0 at each point in freq.
 
@@ -782,17 +731,13 @@ def make_plot():
 
 		line1, = ax.plot(freq_sim,int_sim,color = 'red')	
 
-	if args.spec:
-
-		line2, = ax.plot(freq_obs,int_obs,color = 'black')
-
 	fig.canvas.draw()
 	
 #obs_off turns off the observations
 	
 def obs_off():
 
-	if args.spec == False:
+	if spec == None:
 	
 		print('There are no observations to turn off!')
 		return
@@ -805,59 +750,66 @@ def obs_off():
 #obs_on turns on the observations
 	
 def obs_on():
+
+	if spec == None:
+	
+		print('There are no observations to turn on!')
+		return	
 		
 	line2.set_xdata(freq_obs)
 	line2.set_ydata(int_obs)
 			
 	fig.canvas.draw()	
 	
-#setup runs the initial setup for a molecule
-
-def setup():
-
-	raw_array = read_cat(catalog_file)
-
-	if args.ll or args.ul:
-
-		raw_array = trim_raw_array(raw_array)
-
-	catalog = splice_array(raw_array)
-
-	frequency = np.copy(catalog[0])
-	logint = np.copy(catalog[2])
-	qn7 = np.asarray(catalog[14])
-	qn8 = np.asarray(catalog[15])
-	qn9 = np.asarray(catalog[16])
-	qn10 = np.asarray(catalog[17])
-	qn11 = np.asarray(catalog[18])
-	qn12 = np.asarray(catalog[19])
-	elower = np.asarray(catalog[4])
-
-	eupper = np.empty_like(elower)
-
-	eupper = elower + frequency/29979.2458
-
-	qns = det_qns(qn7,qn8,qn9,qn10,qn11,qn12) #figure out how many qns we have for the molecule
-
-	intensity = convert_int(logint)
-
-	return frequency,logint,qn7,qn8,qn9,qn10,qn11,qn12,elower,eupper,intensity,qns,catalog
+# setup runs the initial setup for a molecule
+# 
+# def setup():
+# 
+# 	raw_array = read_cat(catalog_file)
+# 
+# 	raw_array = trim_raw_array(raw_array)
+# 
+# 	catalog = splice_array(raw_array)
+# 
+# 	frequency = np.copy(catalog[0])
+# 	logint = np.copy(catalog[2])
+# 	qn7 = np.asarray(catalog[14])
+# 	qn8 = np.asarray(catalog[15])
+# 	qn9 = np.asarray(catalog[16])
+# 	qn10 = np.asarray(catalog[17])
+# 	qn11 = np.asarray(catalog[18])
+# 	qn12 = np.asarray(catalog[19])
+# 	elower = np.asarray(catalog[4])
+# 
+# 	eupper = np.empty_like(elower)
+# 
+# 	eupper = elower + frequency/29979.2458
+# 
+# 	qns = det_qns(qn7,qn8,qn9,qn10,qn11,qn12) #figure out how many qns we have for the molecule
+# 
+# 	intensity = convert_int(logint)
+# 	
+# 	if spec:
+# 	
+# 		freq_obs,int_obs = read_obs()
+# 
+# 	return frequency,logint,qn7,qn8,qn9,qn10,qn11,qn12,elower,eupper,intensity,qns,catalog
 	
 #read_obs reads in observations or laboratory spectra and populates freq_obs and int_obs
 
 def read_obs():
 
 	obs = read_cat(spec)
+	
+	global freq_obs,int_obs
 
 	freq_obs = []
 	int_obs = []
 
 	for x in range(len(obs)):
 
-		freq_obs.append(obs[x].split()[0])
-		int_obs.append(obs[x].split()[1].strip('\n'))	
-		
-	return freq_obs,int_obs	
+		freq_obs.append(float(obs[x].split()[0]))
+		int_obs.append(float(obs[x].split()[1].strip('\n')))	
 	
 #store saves the current simulation parameters for recall later.  *Not* saved as a Gaussian. 'x' must be entered as a string with quotes.
 
@@ -869,7 +821,7 @@ def store(x):
 	
 	freq_sim,int_sim = run_sim(frequency,intensity,T,dV,S)
 	
-	sim[x] = Molecule(x,elower,eupper,qns,logint,qn7,qn8,qn9,qn10,qn11,qn12,S,dV,T,vlsr,frequency,freq_sim,intensity,int_sim) 
+	sim[x] = Molecule(x,catalog_file,elower,eupper,qns,logint,qn7,qn8,qn9,qn10,qn11,qn12,S,dV,T,vlsr,frequency,freq_sim,intensity,int_sim) 
 	
 #recall wipes the current simulation and re-loads a previous simulation that was stored with store(). 'x' must be entered as a string with quotes. This will close the currently-open plot.
 
@@ -926,16 +878,74 @@ def overplot(x):
 	freq_sim = freq_temp
 	int_sim = int_temp
 		
+#load_mol loads a new molecule into the system.  Make sure to store the old molecule simulation first, if you want to get it back.  The current graph will be updated with the new molecule.  Catalog file must be given as a string, without the *.cat as usual.  Simulation will begin with the same T, dV, S, vlsr as previous, so change those first if you want.
 
+def load_mol(x):
+
+	global frequency,logint,qn7,qn8,qn9,qn10,qn11,qn12,elower,eupper,intensity,qns,catalog,catalog_file
+	
+	catalog_file = x
+	
+	frequency,logint,qn7,qn8,qn9,qn10,qn11,qn12,elower,eupper,intensity,qns,catalog = setup()
+	
+	frequency += (-vlsr)*frequency/ckm
+	
+	freq_sim,int_sim=run_sim(frequency,intensity,T,dV,S)
+	
+	line1.set_ydata(int_sim)
+	line1.set_xdata(freq_sim)
+	
+	fig.canvas.draw()
+
+#save_results prints out a file with all of the parameters for each molecule *which has been stored.*  It will not print the active molecule unless it has been stored. 'x' must be a string, and the output will go to there.
+
+def save_results(x):
+
+	'''
+	'''
+
+	with open(x, 'w') as output:
+	
+		output.write('ll {}\n' .format(ll))
+		output.write('ul {}\n' .format(ul))
+		output.write('obs {}\n' .format(spec))
+	
+		output.write('Molecule \t T(K) \t S \t dV \t vlsr \t catalog_file\n')
+	
+		for molecule in sim:
+		
+			output.write('{} \t {} \t {} \t {} \t {} \t {}\n' .format(sim[molecule].name,sim[molecule].T,sim[molecule].S,sim[molecule].dV,sim[molecule].vlsr,sim[molecule].catalog_file))
+	
+#status prints the current status of the program and the various key variables.
+
+def status():
+
+	'''
+	prints the current status of the program and the various key variables
+	'''
+
+	print('Current Molecule or Catalog:\t {}' .format(current))
+	print('T: \t {} K' .format(T))
+	print('S: \t {}' .format(S))
+	print('dV: \t {} km/s' .format(dV))
+	print('VLSR: \t {} km/s' .format(vlsr))
+	print('R: \t {} km/s' .format(R))
+	print('ll: \t {} MHz' .format(ll))
+	print('ul: \t {} MHz' .format(ul))
+	print('CT: \t {} K' .format(CT))
+	print('gauss: \t {}' .format(gauss))
+		
+	
 #############################################################
 #							Classes for Storing Results		#
 #############################################################	
 
 class Molecule(object):
 
-	def __init__(self,name,elower,eupper,qns,logint,qn7,qn8,qn9,qn10,qn11,qn12,S,dV,T,vlsr,frequency,freq_sim,intensity,int_sim):
+	def __init__(self,name,catalog_file,elower,eupper,qns,logint,qn7,qn8,qn9,qn10,qn11,qn12,S,dV,T,vlsr,frequency,freq_sim,intensity,int_sim):
 	
 		self.name = name
+		self.catalog_file = catalog_file
 		self.elower = elower
 		self.eupper = eupper
 		self.qns = qns
@@ -964,20 +974,15 @@ sim = {} #dictionary to hold stored simulations
 
 lines = {} #dictionary to hold matplotlib lines
 
-current = '{}' .format(basename)
+freq_obs = [] #to hold laboratory or observational spectra
+int_obs = []
+
+thermal = float('inf') #initial default cutoff for optically-thick lines (i.e. don't touch them unless thermal is modified.)
+
+current = catalog_file
 
 colors = itertools.cycle(['#9400D3','#4B0082','#0000FF','#00FF00','#FFFF00','#FF7F00'])
 
-frequency,logint,qn7,qn8,qn9,qn10,qn11,qn12,elower,eupper,intensity,qns,catalog = setup()
-
-
-
-if args.vlsr:
-
-	frequency += (-vlsr)*frequency/ckm
-
-if args.spec:
-
-	freq_obs,int_obs = read_obs()
-	
-make_plot()
+# frequency,logint,qn7,qn8,qn9,qn10,qn11,qn12,elower,eupper,intensity,qns,catalog = setup()
+# 
+# make_plot()

@@ -1170,7 +1170,7 @@ def clear_line(x):
 	'''	
 	
 	try:
-		lines.pop(x).remove()
+		lines.pop(x)[0].remove()
 		ax.legend()
 		fig.canvas.draw()
 	except:

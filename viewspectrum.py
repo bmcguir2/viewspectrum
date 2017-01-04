@@ -597,45 +597,60 @@ def sim_gaussian(int_sim,freq,linewidth):
 
 #write_spectrum writes out the current freq and intensity to output_file
 
-def write_spectrum(output_file):
+def write_spectrum(x,output_file):
 
 	'''
-	Will write out the currently-active simulation frequency and intensity to output_file (which must be given as a string).  
+	Will write out the simulation frequency and intensity for the currently active simulation ('current'), the summed spectrum from sum_stored() ('sum'), or any stored simulation 'x' to output_file (which must be given as a string).  
 	'''
+	
+	if x == 'current':
+	
+		freq_tmp = freq_sim
+		int_tmp = int_sim
+		
+	elif x == 'sum':
+	
+		freq_tmp = freq_sum
+		int_tmp = int_sum
+		
+	else:
+	
+		freq_tmp = sim[x].freq_sim
+		int_tmp = sim[x].int_sim
 
 	if gauss == True:
 	
-		for h in range(len(freq_sim)):
+		for h in range(len(freq_tmp)):
 
 			if (h == 0): #write out the results to a out_file
 			
 				with open(output_file, 'w') as output: 
 					
-					output.write('{} {}\n' .format(freq_sim[0],int_sim[0]))
+					output.write('{} {}\n' .format(freq_tmp[0],int_tmp[0]))
 						
 			else:
 				
 				with open(output_file, 'a') as output:
 					
-					output.write('{} {}\n' .format(freq_sim[h],int_sim[h]))
+					output.write('{} {}\n' .format(freq_tmp[h],int_tmp[h]))
 						
 			h += 1		
 	
 	else:
 	
-		for h in range(freq_sim.shape[0]):
+		for h in range(freq_tmp.shape[0]):
 
 			if (h == 0): #write out the results to a out_file
 				
 				with open(output_file, 'w') as output: 
 					
-					output.write('{} {}\n' .format(freq_sim[0],int_sim[0]))
+					output.write('{} {}\n' .format(freq_tmp[0],int_tmp[0]))
 						
 			else:
 				
 				with open(output_file, 'a') as output:
 					
-					output.write('{} {}\n' .format(freq_sim[h],int_sim[h]))
+					output.write('{} {}\n' .format(freq_tmp[h],int_tmp[h]))
 						
 			h += 1				
 

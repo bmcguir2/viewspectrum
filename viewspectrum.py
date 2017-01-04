@@ -580,7 +580,7 @@ def sim_gaussian(int_sim,freq,linewidth):
 			
 			alerted = True 
 	
-		l_f = linewidth*freq[x]/3E5 #get the FWHM in MHz
+		l_f = linewidth*freq[x]/ckm #get the FWHM in MHz
 	
 		c = l_f/2.35482
 
@@ -913,7 +913,7 @@ def store(x):
 	saves the current simulation parameters for recall later.  *Not* saved as a Gaussian. 'x' must be entered as a string with quotes.
 	'''
 	
-	sim[x] = Molecule(x,catalog_file,elower,eupper,qns,logint,qn7,qn8,qn9,qn10,qn11,qn12,S,dV,T,vlsr,frequency,freq_sim,intensity,int_sim)
+	sim[x] = Molecule(x,catalog_file,elower,eupper,qns,logint,qn7,qn8,qn9,qn10,qn11,qn12,S,dV,T,CT,vlsr,frequency,freq_sim,intensity,int_sim)
 	
 	save_results('last.results') 
 	
@@ -1132,16 +1132,20 @@ def sum_stored():
 		tmp_freq = np.copy(sim[x].frequency)
 		
 		tmp_freq += (-sim[x].vlsr)*tmp_freq/ckm	
+		
+		tmp_int = np.copy(sim[x].intensity)
+		
+		tmp_int = scale_temp(tmp_int,sim[x].qns,sim[x].elower,sim[x].qn7,sim[x].qn8,sim[x].qn9,sim[x].qn10,sim[x].qn11,sim[x].qn12,sim[x].T,sim[x].CT)
+		
+		tmp_int *= sim[x].S
 	
-		for y in range(len(sim[x].intensity)):
+		for y in range(len(tmp_int)):
 		
 			l_f = sim[x].dV*tmp_freq[y]/ckm #get the FWHM in MHz
 			
 			c = l_f/2.35482
-			
-			tmp_int = sim[x].intensity[y]*sim[x].S
 
-			int_gauss += tmp_int*exp(-((freq_gauss - tmp_freq[y])**2/(2*c**2)))
+			int_gauss += tmp_int[y]*exp(-((freq_gauss - tmp_freq[y])**2/(2*c**2)))
 			
 	int_gauss[int_gauss > thermal] = thermal
 	
@@ -1166,7 +1170,7 @@ def overplot_sum():
 
 class Molecule(object):
 
-	def __init__(self,name,catalog_file,elower,eupper,qns,logint,qn7,qn8,qn9,qn10,qn11,qn12,S,dV,T,vlsr,frequency,freq_sim,intensity,int_sim):
+	def __init__(self,name,catalog_file,elower,eupper,qns,logint,qn7,qn8,qn9,qn10,qn11,qn12,S,dV,T,CT,vlsr,frequency,freq_sim,intensity,int_sim):
 	
 		self.name = name
 		self.catalog_file = catalog_file
@@ -1183,6 +1187,7 @@ class Molecule(object):
 		self.S = S
 		self.dV = dV
 		self.T = T
+		self.CT = CT
 		self.vlsr = vlsr
 		self.frequency = frequency
 		self.freq_sim = freq_sim

@@ -68,8 +68,6 @@ ul = float('inf') #upper limit for the simulation range.  Default is none.
 spec = None	#file of a laboratory or observational spectrum to load in for comparison.  Default is none.
 
 dV = 5.0 #linewidth of the simulation.  Default is 5.0 km/s.
-
-R = 0.5 #resolution of the simulation if using Gaussians.  Default is 0.5 km/s.
 	
 CT = 300.0 #temperature the catalog is simulated at.  Default is 300 K.
 
@@ -539,7 +537,7 @@ def convert_int(logint):
 	
 #simulates Gaussian profiles after intensities are simulated.
 
-def sim_gaussian(int_sim,frequency,linewidth):
+def sim_gaussian(int_sim,freq,linewidth):
 
 	'''
 	Simulates Gaussian profiles for lines, after the intensities have been calculated.  Tries to be smart with how large a range it simulates over, for computational resources.  Includes a thermal cutoff for optically-thick lines.
@@ -549,15 +547,14 @@ def sim_gaussian(int_sim,frequency,linewidth):
 
 	for x in range(int_sim.shape[0]):
 	
-		l_f = linewidth*frequency[x]/3E5 #get the FWHM in MHz
+		l_f = linewidth*freq[x]/ckm #get the FWHM in MHz
 	
-		min_f = frequency[x] - 10*l_f #get the frequency 10 FWHM lower
-		max_f = frequency[x] + 10*l_f #get the frequency 10 FWHM higher
+		min_f = freq[x] - 10*l_f #get the frequency 10 FWHM lower
+		max_f = freq[x] + 10*l_f #get the frequency 10 FWHM higher
 	
 		res_pnts = l_f / 15 #determine a resolution element (15 points across the line)
 	
 		freq_line = np.arange(min_f,max_f,res_pnts)
-		int_line = np.arange(min_f,max_f,res_pnts)
 	
 		freq_gauss.extend(freq_line)
 	
@@ -583,11 +580,11 @@ def sim_gaussian(int_sim,frequency,linewidth):
 			
 			alerted = True 
 	
-		l_f = linewidth*frequency[x]/3E5 #get the FWHM in MHz
+		l_f = linewidth*freq[x]/3E5 #get the FWHM in MHz
 	
 		c = l_f/2.35482
 
-		int_gauss += int_sim[x]*exp(-((freq_gauss - frequency[x])**2/(2*c**2)))
+		int_gauss += int_sim[x]*exp(-((freq_gauss - freq[x])**2/(2*c**2)))
 		
 	int_gauss[int_gauss > thermal] = thermal	
 	
@@ -639,7 +636,7 @@ def write_spectrum(output_file):
 
 #run_sim runs the simulation.  It's a meta routine, so that we can update later
 
-def run_sim(frequency,intensity,T,dV,S):
+def run_sim(freq,intensity,T,dV,S):
 
 	'''
 	Runs a full simulation accounting for the currently-active T, dV, S, and vlsr values, as well as any thermal cutoff for optically-thick lines
@@ -649,14 +646,18 @@ def run_sim(frequency,intensity,T,dV,S):
 
 	int_temp *= S
 	
+	freq_tmp = np.copy(catalog[0])
+	
+	freq_tmp += (-vlsr)*freq_tmp/ckm		
+	
 	if gauss == True:
 
-		freq_sim,int_sim = sim_gaussian(int_temp,frequency,dV)
+		freq_sim,int_sim = sim_gaussian(int_temp,freq_tmp,dV)
 		
 	else:
 	
 		int_temp[int_temp > thermal] = thermal
-		freq_sim = frequency
+		freq_sim = freq_tmp
 		int_sim = int_temp
 		
 	return freq_sim,int_sim
@@ -679,7 +680,11 @@ def modT(x):
 		
 	T = float(x)
 		
-	freq_sim,int_sim = run_sim(frequency,intensity,T,dV,S)
+	freq_tmp = np.copy(catalog[0])
+	
+	freq_tmp += (-vlsr)*freq_tmp/ckm		
+	
+	freq_sim,int_sim = run_sim(freq_tmp,intensity,T,dV,S)
 	
 	line1.set_ydata(int_sim)
 	line1.set_xdata(freq_sim)
@@ -704,7 +709,11 @@ def modS(x):
 		
 	S = x
 		
-	freq_sim,int_sim = run_sim(frequency,intensity,T,dV,S)
+	freq_tmp = np.copy(catalog[0])
+	
+	freq_tmp += (-vlsr)*freq_tmp/ckm		
+	
+	freq_sim,int_sim = run_sim(freq_tmp,intensity,T,dV,S)
 	
 	line1.set_ydata(int_sim)
 	line1.set_xdata(freq_sim)
@@ -754,11 +763,11 @@ def modVLSR(x):
 	
 	vlsr = x
 		
-	frequency = np.copy(catalog[0])
+	freq_tmp = np.copy(catalog[0])
 	
-	frequency += (-vlsr)*frequency/ckm		
+	freq_tmp += (-vlsr)*freq_tmp/ckm		
 	
-	freq_sim,int_sim = run_sim(frequency,intensity,T,dV,S)
+	freq_sim,int_sim = run_sim(freq_tmp,intensity,T,dV,S)
 	
 	line1.set_ydata(int_sim)
 	line1.set_xdata(freq_sim)
@@ -784,8 +793,6 @@ def make_plot():
 	'''
 
 	global fig,ax,line1,line2,freq_sim,intensity,int_sim
-	
-	freq_sim,int_sim=run_sim(frequency,intensity,T,dV,S)
 
 	plt.ion()	
 
@@ -905,12 +912,6 @@ def store(x):
 	'''
 	saves the current simulation parameters for recall later.  *Not* saved as a Gaussian. 'x' must be entered as a string with quotes.
 	'''
-
-	load_mol(catalog_file)
-	
-	intensity = convert_int(logint)
-	
-	freq_sim,int_sim = run_sim(frequency,intensity,T,dV,S)
 	
 	sim[x] = Molecule(x,catalog_file,elower,eupper,qns,logint,qn7,qn8,qn9,qn10,qn11,qn12,S,dV,T,vlsr,frequency,freq_sim,intensity,int_sim)
 	
@@ -991,7 +992,7 @@ def load_mol(x):
 	loads a new molecule into the system.  Make sure to store the old molecule simulation first, if you want to get it back.  The current graph will be updated with the new molecule.  Catalog file must be given as a string, without the *.cat as usual.  Simulation will begin with the same T, dV, S, vlsr as previous, so change those first if you want.
 	'''
 
-	global frequency,logint,qn7,qn8,qn9,qn10,qn11,qn12,elower,eupper,intensity,qns,catalog,catalog_file,fig,current,line1,line2,fig,ax
+	global frequency,logint,qn7,qn8,qn9,qn10,qn11,qn12,elower,eupper,intensity,qns,catalog,catalog_file,fig,current,line1,line2,fig,ax,freq_sim,int_sim
 	
 	current = x
 	
@@ -1025,9 +1026,11 @@ def load_mol(x):
 	
 		read_obs(spec)
 	
-	frequency += (-vlsr)*frequency/ckm
+	tmp_freq = np.copy(frequency)
 	
-	freq_sim,int_sim=run_sim(frequency,intensity,T,dV,S)
+	tmp_freq += (-vlsr)*tmp_freq/ckm
+	
+	freq_sim,int_sim=run_sim(tmp_freq,intensity,T,dV,S)
 	
 	try:
 	
@@ -1058,7 +1061,6 @@ def save_results(x):
 		output.write('S: \t {}\n' .format(S))
 		output.write('dV: \t {} km/s\n' .format(dV))
 		output.write('VLSR: \t {} km/s\n' .format(vlsr))
-		output.write('R: \t {} km/s\n' .format(R))
 		output.write('ll: \t {} MHz\n' .format(ll))
 		output.write('ul: \t {} MHz\n' .format(ul))
 		output.write('CT: \t {} K\n' .format(CT))
@@ -1084,12 +1086,79 @@ def status():
 	print('S: \t {}' .format(S))
 	print('dV: \t {} km/s' .format(dV))
 	print('VLSR: \t {} km/s' .format(vlsr))
-	print('R: \t {} km/s' .format(R))
 	print('ll: \t {} MHz' .format(ll))
 	print('ul: \t {} MHz' .format(ul))
 	print('CT: \t {} K' .format(CT))
 	print('gauss: \t {}' .format(gauss))
 		
+#sum_stored creates a combined spectrum of all stored molecule simulations and stores it in freq_sum and int_sum.  This might take a while.  It's done from scratch because the frequency axes in freq_sim stored for each molecule will not necessarily be the same, so co-adding is difficult without re-gridding, which well, maybe later.	
+
+def sum_stored():
+
+	'''
+	Creates a combined spectrum of all stored molecule simulations and stores it in freq_sum and int_sum.  This might take a while.
+	'''
+	global freq_sum, int_sum
+	
+	freq_gauss = []
+
+	for x in sim:
+	
+		tmp_freq = np.copy(sim[x].frequency)
+		
+		tmp_freq += (-sim[x].vlsr)*tmp_freq/ckm	
+
+		for y in range(len(sim[x].intensity)):
+	
+			l_f = sim[x].dV*tmp_freq[y]/ckm #get the FWHM in MHz
+	
+			min_f = tmp_freq[y] - 10*l_f #get the frequency 10 FWHM lower
+			max_f = tmp_freq[y] + 10*l_f #get the frequency 10 FWHM higher
+	
+			res_pnts = l_f / 15 #determine a resolution element (15 points across the line)
+	
+			freq_line = np.arange(min_f,max_f,res_pnts)
+	
+			freq_gauss.extend(freq_line)
+	
+	int_gauss = [0] * len(freq_gauss)
+	
+	freq_gauss.sort()
+	
+	del tmp_freq
+		
+	for x in sim:
+	
+		tmp_freq = np.copy(sim[x].frequency)
+		
+		tmp_freq += (-sim[x].vlsr)*tmp_freq/ckm	
+	
+		for y in range(len(sim[x].intensity)):
+		
+			l_f = sim[x].dV*tmp_freq[y]/ckm #get the FWHM in MHz
+			
+			c = l_f/2.35482
+			
+			tmp_int = sim[x].intensity[y]*sim[x].S
+
+			int_gauss += tmp_int*exp(-((freq_gauss - tmp_freq[y])**2/(2*c**2)))
+			
+	int_gauss[int_gauss > thermal] = thermal
+	
+	freq_sum = freq_gauss
+	int_sum = int_gauss		
+
+def overplot_sum():
+
+	'''
+	Overplots the summed spectrum of all stored molecules as created by sum_stored() on the current plot, in green.
+	'''	
+	
+	line_color = '#00FF00'
+	
+	ax.plot(freq_sum,int_sum,color = line_color)
+	
+	fig.canvas.draw()
 	
 #############################################################
 #							Classes for Storing Results		#
@@ -1132,11 +1201,17 @@ lines = {} #dictionary to hold matplotlib lines
 freq_obs = [] #to hold laboratory or observational spectra
 int_obs = []
 
+freq_sim = [] #to hold simulated spectra
+int_sim = [] 
+
+freq_sum = [] #to hold combined spectra
+int_sum = []
+
 thermal = float('inf') #initial default cutoff for optically-thick lines (i.e. don't touch them unless thermal is modified.)
 
 current = catalog_file
 
-colors = itertools.cycle(['#9400D3','#4B0082','#0000FF','#00FF00','#FFFF00','#FF7F00'])
+colors = itertools.cycle(['#9400D3','#4B0082','#0000FF','#FFFF00','#FF7F00'])
 
 # frequency,logint,qn7,qn8,qn9,qn10,qn11,qn12,elower,eupper,intensity,qns,catalog = setup()
 # 

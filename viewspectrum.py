@@ -54,6 +54,8 @@ ckm = 2.998*10**5 #speed of light in km/s
 #							Defaults 						#
 #############################################################
 
+first_run = True
+
 T = 300 #temperature for simulations.  Default is 300 K.
 
 catalog_file = None #catalog file to load in.  Needs to be a string.
@@ -1012,12 +1014,36 @@ def overplot(x):
 	freq_sim = sim[x].freq_sim
 	int_sim = sim[x].int_sim
 	
-	line_color = next(colors)
-	
 	if any(line for line in ax.lines if line.get_label()==sim[x].name):
+		line_color = [line.get_color() for line in ax.lines if line.get_label()==sim[x].name]
+		line_style = [line.get_linestyle() for line in ax.lines if line.get_label()==sim[x].name]
 		clear_line(sim[x].name)
+	else:
+		line_color = next(colors)
+		line_style = '-'		
+		
+	if any(line for line in ax.lines if line.get_color()==line_color):
+		match = False
+		i = 1
+		while match == False:
+			#first we just try changing the colors.
+			line_color = next(colors)
+			if any(line for line in ax.lines if line.get_color()==line_color) == False:
+				match = True
+			line = [line for line in ax.lines if line.get_color()==line_color][0]
+			line_style_tmp = line.get_linestyle()
+			line_style = next(styles)
+			#if the line style hasn't been used before for that color, we have a good match and we exit
+			if line_style != line_style_tmp:
+				match = True
+			#otherwise we go to the next line style and try again.  We loop long enough to try all the combinations, and then if we can't find any unique combinations, we go back and just re-use the color w/ the basic line.  Too bad.  Add more colors.
+			else:
+				line_style = next(styles)
+				if i > 4:
+					line_style = '-'
+					match = True			
 	
-	lines[sim[x].name] = ax.plot(freq_sim,int_sim,color = line_color, label = sim[x].name)
+	lines[sim[x].name] = ax.plot(freq_sim,int_sim,color = line_color, linestyle=line_style, label = sim[x].name)
 	
 	ax.legend()
 	fig.canvas.draw()
@@ -1035,7 +1061,7 @@ def load_mol(x):
 	loads a new molecule into the system.  Make sure to store the old molecule simulation first, if you want to get it back.  The current graph will be updated with the new molecule.  Catalog file must be given as a string, without the *.cat as usual.  Simulation will begin with the same T, dV, S, vlsr as previous, so change those first if you want.
 	'''
 
-	global frequency,logint,qn7,qn8,qn9,qn10,qn11,qn12,elower,eupper,intensity,qns,catalog,catalog_file,fig,current,line1,line2,fig,ax,freq_sim,int_sim
+	global frequency,logint,qn7,qn8,qn9,qn10,qn11,qn12,elower,eupper,intensity,qns,catalog,catalog_file,fig,current,line1,line2,fig,ax,freq_sim,int_sim,first_run
 	
 	current = x
 	
@@ -1071,13 +1097,18 @@ def load_mol(x):
 	
 	freq_sim,int_sim=run_sim(tmp_freq,intensity,T,dV,S)
 	
-	#check if a plot is already open.  If it is, nothing happens.  If there are no plots open, plt.get_fignums()[0] is empty and throws an IndexError, which the exception catches and just makes a fresh plot.
+	#check if a plot is already open.  If it is, nothing happens.  If there are no plots open, plt.get_fignums()[0] is empty and throws an IndexError, which the exception catches and just makes a fresh plot.  If it's the first time the program has been run since it was loaded, it ignores this check and just makes a new plot.  
 	
-	try:
-		plt.get_fignums()[0]
-	except:	
+	if first_run == True:
 		make_plot()
+		first_run = False
 		return
+	else:
+		try:
+			plt.get_fignums()[0]
+		except:	
+			make_plot()
+			return
 		
 	#if there is a plot open, we just update the current simulation
 	
@@ -1095,6 +1126,8 @@ def load_mol(x):
 	fig.canvas.draw()	
 	
 	save_results('last.results')
+	
+	
 	
 #clear_line removes a line labeled 'x' from the current plot window.  x must be a string
 
@@ -1289,4 +1322,5 @@ thermal = float('inf') #initial default cutoff for optically-thick lines (i.e. d
 
 current = catalog_file
 
-colors = itertools.cycle(['#9400D3','#4B0082','#0000FF','#FFFF00','#FF7F00'])
+colors = itertools.cycle(['#ff8172','#514829','#a73824','#7b3626','#a8ac87','#8c8e64','#974710','#d38e20','#ce9a3a','#ae7018','#ac5b14','#64350f','#b18f59','#404040','#791304','#1f2161','#171848','#3082fe','#2c5b5e','#390083','#5c65f8','#6346fa','#3c3176','#1cf6ba','#c9bcf0','#90edfc','#3fb8ee','#b89b33','#e7d17b'])
+styles = itertools.cycle(['-','--','-.',':'])

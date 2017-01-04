@@ -18,12 +18,17 @@ Upper Limit Cut-off for Simulation: none
 Linewidth: 5.0 km/s
 Temperature Catalog was Simulated At: 300 K
 Simulate Gaussian Profiles? True
+Thermal Continuum: none
 
 For the Gaussian simulations, the program is hard-coded to provide simulations at +/- 10 FWHM from the line center, and with a resolution that provides 15 points across the FWHM.
 
 Be warned!  The lower limits and upper limits will need to be adjusted for any sufficiently-complex catalog.  You can simulate the full CO catalog, for example, but the full glycolaldehyde catalog would take a few hours.  If the simulation takes more than ~30 seconds, there's a warning that pops up and gives an estimate for how much longer it will take.  This estimate is probably pretty poor.  Also bear in mind that this simulation will likely be performed many times as you adjust parameters, so anything over a few seconds could get pretty tedious.
 
-Finally, it is imperative for accurate temperature scaling that the catalogs used either be simulated at 300 K (the default if you get them from JPL or CDMS) OR that you set CT to the appropriate value BEFORE loading in the catalog.
+It is imperative for accurate temperature scaling that the catalogs used either be simulated at 300 K (the default if you get them from JPL or CDMS) OR that you set CT to the appropriate value BEFORE loading in the catalog.
+
+For a select few catalogs which use odd notation for quantum numbers (+/-), the program won't be able to parse them.  You can get around this by manually adding an exception for that particular catalog, along with a calculation of the partition function from a polynomial fit.  You can see how this is done in calc_q.
+
+Finally, note that the program is calculating partition functions on demand from the catalogs, and only considering lines within the cutoffs.  That means that the absolute value of these partition functions is almost certainly not correct.  This has no effect on the accuracy of the relative intensities of the lines for a single molecule. However, one cannot compare the intensities between two molecules accurately using this method.
 
 #####################################################
 #                                                   #
@@ -61,6 +66,10 @@ Now you can modify the parameters and see their effects on your simulation:
 > modS(x)	#linear intensity scaling factor
 > modV(x)	#vlsr
 > moddV(x)	#linewidth
+
+If you have optically-thick lines, you can set a thermal continuum cutoff to x K.  Note that if the molecules are coming from two different spatial regions, or are masing, the program will not handle this correctly and the overall intensity will be lower than it should be:
+
+> thermal = x
 
 If you want to see a summary of the active simulation parameters:
 

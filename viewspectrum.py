@@ -40,6 +40,7 @@ import warnings
 from matplotlib.ticker import AutoMinorLocator
 import matplotlib.pyplot as plt
 import itertools
+import matplotlib.lines as mlines
 #warnings.filterwarnings('error')
 
 version = 3.0
@@ -383,7 +384,7 @@ def det_qns(qn7,qn8,qn9,qn10,qn11,qn12):
 
 #calc_q will dynamically calculate a partition function whenever needed at a given T.  The catalog file used must have enough lines in it to fully capture the partition function, or the result will not be accurate for Q.
 	
-def calc_q(qns,elower,qn7,qn8,qn9,qn10,qn11,qn12,T):
+def calc_q(qns,elower,qn7,qn8,qn9,qn10,qn11,qn12,T,catalog_file):
 
 	'''
 	Dynamically calculates a partition function whenever needed at a given T.  The catalog file used must have enough lines in it to fully capture the partition function, or the result will not be accurate for Q.  This is perfectly fine for the *relative* intensities of lines for a given molecule used by this program.  However, absolute intensities between molecules are not remotely accurate.  
@@ -506,7 +507,7 @@ def calc_q(qns,elower,qn7,qn8,qn9,qn10,qn11,qn12,T):
 
 #scale_temp scales the simulated intensities to the new temperature
 
-def scale_temp(int_sim,qns,elower,qn7,qn8,qn9,qn10,qn11,qn12,T,CT):
+def scale_temp(int_sim,qns,elower,qn7,qn8,qn9,qn10,qn11,qn12,T,CT,catalog_file):
 
 	'''
 	Converts linear intensities at one temperature to another.
@@ -514,8 +515,8 @@ def scale_temp(int_sim,qns,elower,qn7,qn8,qn9,qn10,qn11,qn12,T,CT):
 
 	scaled_int = np.empty_like(int_sim)
 	
-	Q_T = calc_q(qns,elower,qn7,qn8,qn9,qn10,qn11,qn12,T)
-	Q_CT = calc_q(qns,elower,qn7,qn8,qn9,qn10,qn11,qn12,CT)
+	Q_T = calc_q(qns,elower,qn7,qn8,qn9,qn10,qn11,qn12,T,catalog_file)
+	Q_CT = calc_q(qns,elower,qn7,qn8,qn9,qn10,qn11,qn12,CT,catalog_file)
 	
 	scaled_int = int_sim * (Q_CT/Q_T) * exp(-(((1/T)-(1/CT))*elower)/0.695)
 
@@ -642,7 +643,7 @@ def run_sim(freq,intensity,T,dV,S):
 	Runs a full simulation accounting for the currently-active T, dV, S, and vlsr values, as well as any thermal cutoff for optically-thick lines
 	'''
 
-	int_temp = scale_temp(intensity,qns,elower,qn7,qn8,qn9,qn10,qn11,qn12,T,CT)
+	int_temp = scale_temp(intensity,qns,elower,qn7,qn8,qn9,qn10,qn11,qn12,T,CT,catalog_file)
 
 	int_temp *= S
 	
@@ -686,9 +687,17 @@ def modT(x):
 	
 	freq_sim,int_sim = run_sim(freq_tmp,intensity,T,dV,S)
 	
-	line1.set_ydata(int_sim)
-	line1.set_xdata(freq_sim)
+	clear_line('current')
+	
+	if gauss == False:
+
+		lines['current'] = ax.vlines(freq_sim,0,int_sim,linestyle = '-',color = 'red',label='current') #Plot sticks from TA down to 0 at each point in freq.
+
+	else:
+
+		lines['current'] = ax.plot(freq_sim,int_sim,color = 'red',label='current')
 		
+	ax.legend()
 	fig.canvas.draw()
 	
 #modS changes the scaling, re-simulates, and re-plots
@@ -715,9 +724,17 @@ def modS(x):
 	
 	freq_sim,int_sim = run_sim(freq_tmp,intensity,T,dV,S)
 	
-	line1.set_ydata(int_sim)
-	line1.set_xdata(freq_sim)
+	clear_line('current')
+	
+	if gauss == False:
+
+		lines['current'] = ax.vlines(freq_sim,0,int_sim,linestyle = '-',color = 'red',label='current') #Plot sticks from TA down to 0 at each point in freq.
+
+	else:
+
+		lines['current'] = ax.plot(freq_sim,int_sim,color = 'red',label='current')
 		
+	ax.legend()
 	fig.canvas.draw()
 	
 #moddV changes the velocity width, re-simulates, and re-plots
@@ -740,9 +757,17 @@ def moddV(x):
 		
 	freq_sim,int_sim = run_sim(frequency,intensity,T,dV,S)
 	
-	line1.set_ydata(int_sim)
-	line1.set_xdata(freq_sim)
+	clear_line('current')
+	
+	if gauss == False:
+
+		lines['current'] = ax.vlines(freq_sim,0,int_sim,linestyle = '-',color = 'red',label='current') #Plot sticks from TA down to 0 at each point in freq.
+
+	else:
+
+		lines['current'] = ax.plot(freq_sim,int_sim,color = 'red',label='current')
 		
+	ax.legend()
 	fig.canvas.draw()
 	
 #modVLSR changes the LSR velocity, re-simulates, and re-plots
@@ -769,9 +794,17 @@ def modVLSR(x):
 	
 	freq_sim,int_sim = run_sim(freq_tmp,intensity,T,dV,S)
 	
-	line1.set_ydata(int_sim)
-	line1.set_xdata(freq_sim)
+	clear_line('current')
 	
+	if gauss == False:
+
+		lines['current'] = ax.vlines(freq_sim,0,int_sim,linestyle = '-',color = 'red',label='current') #Plot sticks from TA down to 0 at each point in freq.
+
+	else:
+
+		lines['current'] = ax.plot(freq_sim,int_sim,color = 'red',label='current')
+	
+	ax.legend()
 	fig.canvas.draw()		
 
 #modV is an alias for modVLSR
@@ -809,18 +842,21 @@ def make_plot():
 	ax.get_xaxis().get_major_formatter().set_scientific(False) #Don't let the x-axis go into scientific notation
 	ax.get_xaxis().get_major_formatter().set_useOffset(False)
 	
-	if spec:
-
-		line2, = ax.plot(freq_obs,int_obs,color = 'black')
+	try:
+		lines['obs'] = ax.plot(freq_obs,int_obs,color = 'black',label='obs')
+		obs_line = mlines.Line2D([],[],color='black',label='Obs')
+	except:
+		pass
 
 	if gauss == False:
 
-		line1, = ax.vlines(freq_sim,0,int_sim,linestyle = '-',color = 'red') #Plot sticks from TA down to 0 at each point in freq.
+		lines['current'] = ax.vlines(freq_sim,0,int_sim,linestyle = '-',color = 'red',label='current') #Plot sticks from TA down to 0 at each point in freq.
 
 	else:
 
-		line1, = ax.plot(freq_sim,int_sim,color = 'red')	
+		lines['current'] = ax.plot(freq_sim,int_sim,color = 'red',label='current')	
 
+	ax.legend()
 	fig.canvas.draw()
 	
 	save_results('last.results')
@@ -832,43 +868,41 @@ def obs_off():
 	'''
 	turns off the laboratory data or observations on the plot
 	'''
-
-	if spec == None:
 	
-		print('There are no observations to turn off!')
+	try:
+		clear_line('obs')
 		return
-		
-	line2.set_xdata([])
-	line2.set_ydata([])
-			
-	fig.canvas.draw()	
+	except:
+		print('The observations are already off.  You can turn them on with obs_on()')
+		return
 	
+	try:
+		lines['obs']
+	except:
+		print('There are no observations loaded into the program to turn off.  Load in obs with read_obs()')
+		return	
+			
 #obs_on turns on the observations
 	
 def obs_on():
 
 	'''
 	turns on the laboratory data or observations on the plot
-	'''
-
-	if spec == None:
+	'''	
 	
-		print('There are no observations to turn on!')
-		return	
-		
-	try:
-	
-		line2.set_xdata(freq_obs)
-		line2.set_ydata(int_obs)
-			
+	if any(line for line in ax.lines if line.get_label()=='obs'):	
+		ax.legend()
 		fig.canvas.draw()
-		
+		return
+
+	try:
+		ax.add_line(lines['obs'][0])
+		ax.legend()
+		fig.canvas.draw()
 	except:
-	
-		line2, = ax.plot(freq_obs,int_obs,color = 'black')
-		
-		fig.canvas.draw()	
-	
+		print('There are no observations loaded into the program to turn on.  Load in obs with read_obs()')
+		return
+			
 #read_obs reads in observations or laboratory spectra and populates freq_obs and int_obs
 
 def read_obs(x):
@@ -892,6 +926,11 @@ def read_obs(x):
 
 		freq_obs.append(float(obs[x].split()[0]))
 		int_obs.append(float(obs[x].split()[1].strip('\n')))
+		
+	try:		
+		lines['obs'] = 	ax.plot(freq_obs,int_obs,color = 'black',label='obs')
+	except:
+		return
 		
 #close closes the currently open plot
 
@@ -975,8 +1014,12 @@ def overplot(x):
 	
 	line_color = next(colors)
 	
-	ax.plot(freq_sim,int_sim,color = line_color)
+	if any(line for line in ax.lines if line.get_label()==sim[x].name):
+		clear_line(sim[x].name)
 	
+	lines[sim[x].name] = ax.plot(freq_sim,int_sim,color = line_color, label = sim[x].name)
+	
+	ax.legend()
 	fig.canvas.draw()
 	
 	freq_sim = freq_temp
@@ -1022,28 +1065,54 @@ def load_mol(x):
 
 	intensity = convert_int(logint)
 	
-	if spec:
-	
-		read_obs(spec)
-	
 	tmp_freq = np.copy(frequency)
 	
 	tmp_freq += (-vlsr)*tmp_freq/ckm
 	
 	freq_sim,int_sim=run_sim(tmp_freq,intensity,T,dV,S)
 	
+	#check if a plot is already open.  If it is, nothing happens.  If there are no plots open, plt.get_fignums()[0] is empty and throws an IndexError, which the exception catches and just makes a fresh plot.
+	
 	try:
-	
-		line1.set_ydata(int_sim)
-		line1.set_xdata(freq_sim)
-	
-		fig.canvas.draw()
-		
-	except:
-	
+		plt.get_fignums()[0]
+	except:	
 		make_plot()
+		return
+		
+	#if there is a plot open, we just update the current simulation
+	
+	clear_line('current')
+	
+	if gauss == False:
+
+		lines['current'] = ax.vlines(freq_sim,0,int_sim,linestyle = '-',color = 'red',label='current') #Plot sticks from TA down to 0 at each point in freq.
+
+	else:
+
+		lines['current'] = ax.plot(freq_sim,int_sim,color = 'red',label='current')	
+
+	ax.legend()
+	fig.canvas.draw()	
 	
 	save_results('last.results')
+	
+#clear_line removes a line labeled 'x' from the current plot window.  x must be a string
+
+def clear_line(x):
+
+	'''
+	removes a line labeled 'x' from the current plot window.  x must be a string
+	'''
+
+	try:
+		line = [line for line in ax.lines if line.get_label()==x][0]
+		ax.lines.remove(line)
+		ax.legend()
+		fig.canvas.draw()
+		return
+	except:
+		print('No line labeled {} is on the current plot.' .format(x))
+		return
 
 #save_results prints out a file with all of the parameters for each molecule *which has been stored.*  It will not print the active molecule unless it has been stored. 'x' must be a string, and the output will go to there.
 
@@ -1135,7 +1204,7 @@ def sum_stored():
 		
 		tmp_int = np.copy(sim[x].intensity)
 		
-		tmp_int = scale_temp(tmp_int,sim[x].qns,sim[x].elower,sim[x].qn7,sim[x].qn8,sim[x].qn9,sim[x].qn10,sim[x].qn11,sim[x].qn12,sim[x].T,sim[x].CT)
+		tmp_int = scale_temp(tmp_int,sim[x].qns,sim[x].elower,sim[x].qn7,sim[x].qn8,sim[x].qn9,sim[x].qn10,sim[x].qn11,sim[x].qn12,sim[x].T,sim[x].CT,sim[x].catalog_file)
 		
 		tmp_int *= sim[x].S
 	
@@ -1160,8 +1229,12 @@ def overplot_sum():
 	
 	line_color = '#00FF00'
 	
-	ax.plot(freq_sum,int_sum,color = line_color)
+	if any(line for line in ax.lines if line.get_label()=='sum'):
+		clear_line('sum')
 	
+	lines['sum'] = ax.plot(freq_sum,int_sum,color = line_color, label = 'sum', gid='sum')
+	
+	ax.legend()
 	fig.canvas.draw()
 	
 #############################################################
@@ -1217,7 +1290,3 @@ thermal = float('inf') #initial default cutoff for optically-thick lines (i.e. d
 current = catalog_file
 
 colors = itertools.cycle(['#9400D3','#4B0082','#0000FF','#FFFF00','#FF7F00'])
-
-# frequency,logint,qn7,qn8,qn9,qn10,qn11,qn12,elower,eupper,intensity,qns,catalog = setup()
-# 
-# make_plot()

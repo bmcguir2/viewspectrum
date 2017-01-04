@@ -871,17 +871,17 @@ def make_plot():
 	
 	try:
 		freq_obs[0]
-		lines['obs'] = ax.plot(freq_obs,int_obs,color = 'black',label='obs')
+		lines['obs'] = ax.plot(freq_obs,int_obs,color = 'black',label='obs',zorder=0)
 	except:
 		pass
 
 	if gauss == False:
 
-		lines['current'] = ax.vlines(freq_sim,0,int_sim,linestyle = '-',color = 'red',label='current') #Plot sticks from TA down to 0 at each point in freq.
+		lines['current'] = ax.vlines(freq_sim,0,int_sim,linestyle = '-',color = 'red',label='current',zorder=500) #Plot sticks from TA down to 0 at each point in freq.
 
 	else:
 
-		lines['current'] = ax.plot(freq_sim,int_sim,color = 'red',label='current')	
+		lines['current'] = ax.plot(freq_sim,int_sim,color = 'red',label='current',zorder=500)	
 
 	ax.legend()
 	fig.canvas.draw()
@@ -895,7 +895,7 @@ def obs_off():
 	'''
 	turns off the laboratory data or observations on the plot
 	'''
-	
+
 	try:
 		clear_line('obs')
 		save_results('last.results')
@@ -919,14 +919,14 @@ def obs_on():
 	turns on the laboratory data or observations on the plot
 	'''	
 	
-	if any(line for line in ax.lines if line.get_label()=='obs'):	
-		ax.legend()
-		fig.canvas.draw()
-		save_results('last.results')
+	try:
+		lines['obs']
 		return
+	except:
+		pass
 
 	try:
-		ax.add_line(lines['obs'][0])
+		lines['obs'] = 	ax.plot(freq_obs,int_obs,color = 'black',label='obs',zorder=0)
 		ax.legend()
 		fig.canvas.draw()
 		save_results('last.results')
@@ -959,7 +959,7 @@ def read_obs(x):
 		int_obs.append(float(obs[x].split()[1].strip('\n')))
 		
 	try:		
-		lines['obs'] = 	ax.plot(freq_obs,int_obs,color = 'black',label='obs')
+		lines['obs'] = 	ax.plot(freq_obs,int_obs,color = 'black',label='obs',zorder=0)
 	except:
 		return
 		
@@ -1312,7 +1312,7 @@ def overplot_sum():
 	if any(line for line in ax.lines if line.get_label()=='sum'):
 		clear_line('sum')
 	
-	lines['sum'] = ax.plot(freq_sum,int_sum,color = line_color, label = 'sum', gid='sum', linestyle = '-')
+	lines['sum'] = ax.plot(freq_sum,int_sum,color = line_color, label = 'sum', gid='sum', linestyle = '-',zorder=5000)
 	
 	ax.legend()
 	fig.canvas.draw()

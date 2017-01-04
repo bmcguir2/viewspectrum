@@ -17,6 +17,7 @@
 # 1.8 - adding ability to write a simulation out from interactive session
 # 2.0 - dynamically-updating plots
 # 3.0 - store and plot multiple species, switches to requiring ipython
+# 3.1 - restore from save file
 
 #############################################################
 #							Preamble						#
@@ -34,16 +35,17 @@ if sys.version_info.major != 3:
 
 import numpy as np
 from numpy import exp as exp
-import time
+import time as tm
 import random
 import warnings
 from matplotlib.ticker import AutoMinorLocator
 import matplotlib.pyplot as plt
 import itertools
 import matplotlib.lines as mlines
+from datetime import datetime, date, time
 #warnings.filterwarnings('error')
 
-version = 3.0
+version = 3.1
 
 h = 6.626*10**(-34) #Planck's constant in J*s
 k = 1.381*10**(-23) #Boltzmann's constant in J/K
@@ -565,13 +567,13 @@ def sim_gaussian(int_sim,freq,linewidth):
 	
 	freq_gauss.sort()
 	
-	start_time = time.time()
+	start_time = tm.time()
 	
 	alerted = False
 
 	for x in range(int_sim.shape[0]):
 	
-		telapsed = time.time() - start_time
+		telapsed = tm.time() - start_time
 		
 		if telapsed > 5 and alerted == False:
 		
@@ -702,6 +704,8 @@ def modT(x):
 	ax.legend()
 	fig.canvas.draw()
 	
+	save_results('last.results')
+	
 #modS changes the scaling, re-simulates, and re-plots
 
 def modS(x):
@@ -739,6 +743,8 @@ def modS(x):
 	ax.legend()
 	fig.canvas.draw()
 	
+	save_results('last.results')
+	
 #moddV changes the velocity width, re-simulates, and re-plots
 
 def moddV(x):
@@ -771,6 +777,8 @@ def moddV(x):
 		
 	ax.legend()
 	fig.canvas.draw()
+	
+	save_results('last.results')
 	
 #modVLSR changes the LSR velocity, re-simulates, and re-plots
 
@@ -807,7 +815,9 @@ def modVLSR(x):
 		lines['current'] = ax.plot(freq_sim,int_sim,color = 'red',label='current')
 	
 	ax.legend()
-	fig.canvas.draw()		
+	fig.canvas.draw()
+	
+	save_results('last.results')		
 
 #modV is an alias for modVLSR
 
@@ -845,8 +855,8 @@ def make_plot():
 	ax.get_xaxis().get_major_formatter().set_useOffset(False)
 	
 	try:
+		freq_obs[0]
 		lines['obs'] = ax.plot(freq_obs,int_obs,color = 'black',label='obs')
-		obs_line = mlines.Line2D([],[],color='black',label='Obs')
 	except:
 		pass
 
@@ -873,6 +883,7 @@ def obs_off():
 	
 	try:
 		clear_line('obs')
+		save_results('last.results')
 		return
 	except:
 		print('The observations are already off.  You can turn them on with obs_on()')
@@ -880,6 +891,7 @@ def obs_off():
 	
 	try:
 		lines['obs']
+		save_results('last.results')
 	except:
 		print('There are no observations loaded into the program to turn off.  Load in obs with read_obs()')
 		return	
@@ -895,12 +907,14 @@ def obs_on():
 	if any(line for line in ax.lines if line.get_label()=='obs'):	
 		ax.legend()
 		fig.canvas.draw()
+		save_results('last.results')
 		return
 
 	try:
 		ax.add_line(lines['obs'][0])
 		ax.legend()
 		fig.canvas.draw()
+		save_results('last.results')
 	except:
 		print('There are no observations loaded into the program to turn on.  Load in obs with read_obs()')
 		return
@@ -1013,10 +1027,10 @@ def overplot(x):
 	
 	freq_sim = sim[x].freq_sim
 	int_sim = sim[x].int_sim
-	
+
 	if any(line for line in ax.lines if line.get_label()==sim[x].name):
-		line_color = [line.get_color() for line in ax.lines if line.get_label()==sim[x].name]
-		line_style = [line.get_linestyle() for line in ax.lines if line.get_label()==sim[x].name]
+		line_color = [line.get_color() for line in ax.lines if line.get_label()==sim[x].name][0]
+		line_style = [line.get_linestyle() for line in ax.lines if line.get_label()==sim[x].name][0]
 		clear_line(sim[x].name)
 	else:
 		line_color = next(colors)
@@ -1061,7 +1075,14 @@ def load_mol(x):
 	loads a new molecule into the system.  Make sure to store the old molecule simulation first, if you want to get it back.  The current graph will be updated with the new molecule.  Catalog file must be given as a string, without the *.cat as usual.  Simulation will begin with the same T, dV, S, vlsr as previous, so change those first if you want.
 	'''
 
-	global frequency,logint,qn7,qn8,qn9,qn10,qn11,qn12,elower,eupper,intensity,qns,catalog,catalog_file,fig,current,line1,line2,fig,ax,freq_sim,int_sim,first_run
+	global frequency,logint,qn7,qn8,qn9,qn10,qn11,qn12,elower,eupper,intensity,qns,catalog,catalog_file,fig,current,fig,ax,freq_sim,int_sim,first_run
+	
+	
+	if first_run == False:
+		try:
+			clear_line('current')
+		except:
+			pass
 	
 	current = x
 	
@@ -1112,8 +1133,6 @@ def load_mol(x):
 		
 	#if there is a plot open, we just update the current simulation
 	
-	clear_line('current')
-	
 	if gauss == False:
 
 		lines['current'] = ax.vlines(freq_sim,0,int_sim,linestyle = '-',color = 'red',label='current') #Plot sticks from TA down to 0 at each point in freq.
@@ -1126,23 +1145,19 @@ def load_mol(x):
 	fig.canvas.draw()	
 	
 	save_results('last.results')
-	
-	
-	
+		
 #clear_line removes a line labeled 'x' from the current plot window.  x must be a string
 
 def clear_line(x):
 
 	'''
 	removes a line labeled 'x' from the current plot window.  x must be a string
-	'''
-
+	'''	
+	
 	try:
-		line = [line for line in ax.lines if line.get_label()==x][0]
-		ax.lines.remove(line)
+		lines.pop(x).remove()
 		ax.legend()
 		fig.canvas.draw()
-		return
 	except:
 		print('No line labeled {} is on the current plot.' .format(x))
 		return
@@ -1157,22 +1172,37 @@ def save_results(x):
 
 	with open(x, 'w') as output:
 	
-		output.write('Current Molecule or Catalog:\t {}\n' .format(current))
-		output.write('Current lab or observation: \t {}\n' .format(spec))
-		output.write('T: \t {} K\n' .format(T))
-		output.write('S: \t {}\n' .format(S))
-		output.write('dV: \t {} km/s\n' .format(dV))
-		output.write('VLSR: \t {} km/s\n' .format(vlsr))
-		output.write('ll: \t {} MHz\n' .format(ll))
-		output.write('ul: \t {} MHz\n' .format(ul))
-		output.write('CT: \t {} K\n' .format(CT))
-		output.write('gauss: \t {}\n\n' .format(gauss))
+		output.write('viewspectrum.py version {}\n' .format(version))		
+		output.write('saved: {}\n\n' .format(datetime.now().strftime("%m-%d-%y %H:%M:%S")))
+		
+		output.write('#### Active Simulation ####\n\n')
 	
-		output.write('Molecule \t T(K) \t S \t dV \t vlsr \t catalog_file\n')
+		output.write('catalog_file:\t{}\n' .format(current))
+		output.write('obs:\t{}\n' .format(spec))
+		output.write('T:\t{} K\n' .format(T))
+		output.write('S:\t{}\n' .format(S))
+		output.write('dV:\t{} km/s\n' .format(dV))
+		output.write('VLSR:\t{} km/s\n' .format(vlsr))
+		output.write('ll:\t{} MHz\n' .format(ll))
+		output.write('ul:\t{} MHz\n' .format(ul))
+		output.write('CT:\t{} K\n' .format(CT))
+		output.write('gauss:\t{}\n\n' .format(gauss))
+	
+		output.write('#### Stored Simulations ####\n\n')
+		
+		output.write('Molecule\tT(K)\tS\tdV\tvlsr\tCT\tcatalog_file\n')
 	
 		for molecule in sim:
 		
-			output.write('{} \t {} \t {} \t {} \t {} \t {}\n' .format(sim[molecule].name,sim[molecule].T,sim[molecule].S,sim[molecule].dV,sim[molecule].vlsr,sim[molecule].catalog_file))
+			output.write('{}\t{}\t{}\t{}\t{}\t{}\t{}\n' .format(sim[molecule].name,sim[molecule].T,sim[molecule].S,sim[molecule].dV,sim[molecule].vlsr,sim[molecule].CT,sim[molecule].catalog_file))
+			
+		output.write('\n#### Active Graph Status ####\n\n')
+		
+		output.write('Label\tColor\tStyle\n')
+		
+		for line in ax.lines:
+		
+			output.write('{}\t{}\t{}\n' .format(line.get_label(),line.get_color(),line.get_linestyle()))	
 	
 #status prints the current status of the program and the various key variables.
 
@@ -1254,6 +1284,8 @@ def sum_stored():
 	freq_sum = freq_gauss
 	int_sum = int_gauss		
 
+#overplot_sum overplots the summed spectrum of all stored molecules as created by sum_stored() on the current plot, in green.
+
 def overplot_sum():
 
 	'''
@@ -1265,10 +1297,157 @@ def overplot_sum():
 	if any(line for line in ax.lines if line.get_label()=='sum'):
 		clear_line('sum')
 	
-	lines['sum'] = ax.plot(freq_sum,int_sum,color = line_color, label = 'sum', gid='sum')
+	lines['sum'] = ax.plot(freq_sum,int_sum,color = line_color, label = 'sum', gid='sum', linestyle = '-')
 	
 	ax.legend()
 	fig.canvas.draw()
+	
+#restore restores the state of the program from a save file, loading all stored spectra into memory, loads the previously active simulation into current, and restores the last active graph. x is a string with the filename of the restore file. The catalog files must be present, and named to match those in the save file.
+
+def restore(x):
+
+	'''
+	restores the state of the program from a save file, loading all stored spectra into memory, loads the previously active simulation into current, and restores the last active graph. x is a string with the filename of the restore file. The catalog files must be present, and named to match those in the save file.
+	'''
+
+	global frequency,logint,qn7,qn8,qn9,qn10,qn11,qn12,elower,eupper,intensity,qns,catalog,catalog_file,fig,current,fig,ax,freq_sim,int_sim,T,dV,S,vlsr,ll,ul,CT,gauss,first_run
+
+	#read in the save file as an array line by line
+	
+	restore_array = []
+	
+	try:
+		with open(x) as input:
+			for line in input:
+				restore_array.append(line)
+	except TypeError:
+		print('Input must be a string in \'\'.')
+		return
+	except FileNotFoundError:
+		print('This is not the file you are looking for.')
+		return
+	
+	#check if the file that was read it is actually a savefile for viewspectrum.py
+	
+	if restore_array[0].split()[0] != 'viewspectrum.py':
+		print('The file is not a viewspectrum.py save file, has been altered, or was created with an older version of the program.  In any case, I can\'t read it, sorry.')
+		return	
+		
+	#let's grab the date and time, so we can print some nice information to the terminal
+	
+	restore_date = restore_array[1].split()[1]
+	restore_time = restore_array[1].split()[2]	
+		
+	#separate out the sections into their own arrays
+
+	active_array = []	
+	stored_array = []
+	graph_array = []
+	
+	#figure out where each section starts
+	
+	active_index = restore_array.index('#### Active Simulation ####\n')
+	stored_index = restore_array.index('#### Stored Simulations ####\n')
+	graph_index = restore_array.index('#### Active Graph Status ####\n')
+	
+	for i in range(active_index+2,stored_index-1):
+	
+		active_array.append(restore_array[i])
+		
+	for i in range(stored_index+3,graph_index-1):
+	
+		stored_array.append(restore_array[i])
+		
+	for i in range(graph_index+3,len(restore_array)):
+	
+		graph_array.append(restore_array[i])
+		
+	#just to be safe, let's set the upper limits, lower limits, and gaussian toggles now
+	
+	
+	if active_array[9].split('\t')[1].strip('\n') == 'True':
+		gauss = True
+	else:
+		gauss = False
+	ll = float(active_array[6].split('\t')[1].strip(' MHz\n'))
+	ul = float(active_array[7].split('\t')[1].strip(' MHz\n'))
+	
+	#OK, now time to do the hard part.  As one always should, let's start with the middle part of the whole file, and load and then store all of the simulations.
+	
+	for i in range(len(stored_array)):
+	
+		name = stored_array[i].split('\t')[0]
+		T = float(stored_array[i].split('\t')[1])
+		S = float(stored_array[i].split('\t')[2])
+		dV = float(stored_array[i].split('\t')[3])
+		vlsr = float(stored_array[i].split('\t')[4])
+		CT = float(stored_array[i].split('\t')[5])
+		catalog_file = str(stored_array[i].split('\t')[6]).strip('\n').strip()
+		
+		try:
+			first_run = True
+			load_mol(catalog_file)
+		except FileNotFoundError:
+			print('I was unable to locate the catalog file {} for molecule entry {}.  Sorry.' .format(catalog_file,name))
+			return
+			
+		store(name)
+		
+		close()
+	
+	#Now we move on to loading in the currently-active molecule
+	
+	catalog_file = active_array[0].split('\t')[1].strip('\n')
+	try:
+		obs = active_array[1].split('\t')[1].strip('\n')
+		read_obs(obs)
+	except:
+		pass
+	T = float(active_array[2].split('\t')[1].strip(' K\n'))
+	S = float(active_array[3].split('\t')[1].strip('\n'))
+	dV = float(active_array[4].split('\t')[1].strip(' km/s\n'))
+	vlsr = float(active_array[5].split('\t')[1].strip(' km/s\n'))
+	CT = float(active_array[8].split('\t')[1].strip(' K\n'))
+	
+	try:
+		first_run = True
+		load_mol(catalog_file)
+	except FileNotFoundError:
+		print('I was unable to locate the catalog file {} for molecule entry {}.  Sorry.' .format(catalog_file,name))
+		return
+		
+	#And finally, overplot anything that was on the plot previously
+	
+	for i in range(len(graph_array)):
+	
+		name = graph_array[i].split('\t')[0]
+		line_color = graph_array[i].split('\t')[1]
+		line_style = graph_array[i].split('\t')[2].strip('\n')
+		
+		if name == 'obs':
+		
+			continue
+			
+		elif name == 'current':
+		
+			continue
+			
+		elif name == 'sum':
+		
+			sum_stored()
+			overplot_sum()
+			continue			
+			
+		else:
+			
+			lines[name] = ax.plot(sim[name].freq_sim,sim[name].int_sim,color = line_color, linestyle=line_style, label = name)	
+			
+		ax.legend()
+		fig.canvas.draw()
+		
+	#If we made it here, we were successful, so let's print out what we did
+	
+	print('Successfully restored from file {} which was saved on {} at {}.' .format(x,restore_date,restore_time))	
 	
 #############################################################
 #							Classes for Storing Results		#

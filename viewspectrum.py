@@ -58,6 +58,8 @@ ckm = 2.998*10**5 #speed of light in km/s
 
 first_run = True
 
+auto_update = False
+
 T = 300 #temperature for simulations.  Default is 300 K.
 
 catalog_file = None #catalog file to load in.  Needs to be a string.
@@ -666,9 +668,7 @@ def run_sim(freq,intensity,T,dV,S):
 
 	int_temp *= S
 	
-	freq_tmp = np.copy(freq)
-	
-	freq_tmp += (-vlsr)*freq_tmp/ckm		
+	freq_tmp = np.copy(freq)	
 	
 	if gauss == True:
 
@@ -700,7 +700,7 @@ def modT(x):
 		
 	T = float(x)
 		
-	freq_tmp = np.copy(catalog[0])
+	freq_tmp = np.copy(frequency)
 	
 	freq_tmp += (-vlsr)*freq_tmp/ckm		
 	
@@ -739,7 +739,7 @@ def modS(x):
 		
 	S = x
 		
-	freq_tmp = np.copy(catalog[0])
+	freq_tmp = np.copy(frequency)
 	
 	freq_tmp += (-vlsr)*freq_tmp/ckm		
 	
@@ -777,8 +777,12 @@ def moddV(x):
 	global dV,freq_sim,int_sim
 	
 	dV = x
+	
+	freq_tmp = np.copy(frequency)
+	
+	freq_tmp += (-vlsr)*freq_tmp/ckm		
 		
-	freq_sim,int_sim = run_sim(frequency,intensity,T,dV,S)
+	freq_sim,int_sim = run_sim(freq_tmp,intensity,T,dV,S)
 	
 	clear_line('current')
 	
@@ -813,7 +817,7 @@ def modVLSR(x):
 	
 	vlsr = x
 		
-	freq_tmp = np.copy(catalog[0])
+	freq_tmp = np.copy(frequency)
 	
 	freq_tmp += (-vlsr)*freq_tmp/ckm		
 	
@@ -985,6 +989,14 @@ def store(x):
 	
 	sim[x] = Molecule(x,catalog_file,elower,eupper,qns,logint,qn7,qn8,qn9,qn10,qn11,qn12,S,dV,T,CT,vlsr,frequency,freq_sim,intensity,int_sim)
 	
+	if auto_update == True:
+	
+		sum_stored()
+		overplot_sum()
+		
+	if any(line for line in ax.lines if line.get_label()==x):
+		overplot(x)	
+	
 	save_results('last.results') 
 	
 #recall wipes the current simulation and re-loads a previous simulation that was stored with store(). 'x' must be entered as a string with quotes. This will close the currently-open plot.
@@ -1076,27 +1088,29 @@ def overplot(x):
 	else:
 		line_color = next(colors)
 		line_style = '-'		
+
+#Not working at the moment
 		
-	if any(line for line in ax.lines if line.get_color()==line_color):
-		match = False
-		i = 1
-		while match == False:
-			#first we just try changing the colors.
-			line_color = next(colors)
-			if any(line for line in ax.lines if line.get_color()==line_color) == False:
-				match = True
-			line = [line for line in ax.lines if line.get_color()==line_color][0]
-			line_style_tmp = line.get_linestyle()
-			line_style = next(styles)
-			#if the line style hasn't been used before for that color, we have a good match and we exit
-			if line_style != line_style_tmp:
-				match = True
-			#otherwise we go to the next line style and try again.  We loop long enough to try all the combinations, and then if we can't find any unique combinations, we go back and just re-use the color w/ the basic line.  Too bad.  Add more colors.
-			else:
-				line_style = next(styles)
-				if i > 4:
-					line_style = '-'
-					match = True			
+# 	if any(line for line in ax.lines if line.get_color()==line_color):
+# 		match = False
+# 		i = 1
+# 		while match == False:
+# 			#first we just try changing the colors.
+# 			line_color = next(colors)
+# 			if any(line for line in ax.lines if line.get_color()==line_color) == False:
+# 				match = True
+# 			line = [line for line in ax.lines if line.get_color()==line_color][0]
+# 			line_style_tmp = line.get_linestyle()
+# 			line_style = next(styles)
+# 			#if the line style hasn't been used before for that color, we have a good match and we exit
+# 			if line_style != line_style_tmp:
+# 				match = True
+# 			#otherwise we go to the next line style and try again.  We loop long enough to try all the combinations, and then if we can't find any unique combinations, we go back and just re-use the color w/ the basic line.  Too bad.  Add more colors.
+# 			else:
+# 				line_style = next(styles)
+# 				if i > 4:
+# 					line_style = '-'
+# 					match = True			
 	
 	lines[sim[x].name] = ax.plot(freq_sim,int_sim,color = line_color, linestyle=line_style, label = sim[x].name)
 	
@@ -1196,11 +1210,19 @@ def clear_line(x):
 	'''	
 	
 	try:
-		lines.pop(x)[0].remove()
+		line = lines.pop(x)
+	except:
+		return
+	
+	try:
+		line.remove()
 		ax.legend()
 		fig.canvas.draw()
 	except:
-		pass
+		line[0].remove()
+		ax.legend()
+		fig.canvas.draw()		
+
 
 #save_results prints out a file with all of the parameters for each molecule *which has been stored.*  It will not print the active molecule unless it has been stored. 'x' must be a string, and the output will go to there.
 
@@ -1227,7 +1249,8 @@ def save_results(x):
 		output.write('ul:\t{} MHz\n' .format(ul))
 		output.write('CT:\t{} K\n' .format(CT))
 		output.write('gauss:\t{}\n' .format(gauss))
-		output.write('catalog_file:\t{}\n\n' .format(catalog_file))
+		output.write('catalog_file:\t{}\n' .format(catalog_file))
+		output.write('thermal:\t{} K\n\n' .format(thermal))
 	
 		output.write('#### Stored Simulations ####\n\n')
 		
@@ -1404,7 +1427,7 @@ def restore(x):
 	
 		graph_array.append(restore_array[i])
 		
-	#just to be safe, let's set the upper limits, lower limits, and gaussian toggles now
+	#just to be safe, let's set the upper limits, lower limits, gaussian toggles, and thermal values now.
 	
 	
 	if active_array[9].split('\t')[1].strip('\n') == 'True':
@@ -1413,6 +1436,7 @@ def restore(x):
 		gauss = False
 	ll = float(active_array[6].split('\t')[1].strip(' MHz\n'))
 	ul = float(active_array[7].split('\t')[1].strip(' MHz\n'))
+	thermal = active_array[11].split('\t')[1].strip('\n')
 	
 	#OK, now time to do the hard part.  As one always should, let's start with the middle part of the whole file, and load and then store all of the simulations.
 	

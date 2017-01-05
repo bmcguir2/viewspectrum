@@ -293,7 +293,10 @@ def splice_array(x):
 		logint[line] = float(str(x[line][21:29]).strip())
 		dof[line] = int(str(x[line][29:31]).strip())
 		elower[line] = float(str(x[line][31:41]).strip())
-		gup[line] = int(str(x[line][41:44]).strip())
+		try:
+			gup[line] = int(str(x[line][41:44]).strip()) if str(x[line][41:44]).strip() else ''
+		except ValueError:
+			fix_qn(gup,line,str(x[line][41:44]))
 		tag[line] = int(str(x[line][44:51]).strip())
 		qnformat[line] = int(str(x[line][51:55]).strip())
 		try:
@@ -363,6 +366,8 @@ def det_qns(qn7,qn8,qn9,qn10,qn11,qn12):
 		qns = 2
 	except ValueError:
 		pass
+	except IndexError:
+		print('There are no lines in the chosen range.  The program is about to crash, sorry.  I will fix this at some point.')
 		
 	try:
 		int(qn9[0])
@@ -674,7 +679,9 @@ def run_sim(freq,intensity,T,dV,S):
 
 	int_temp *= S
 	
-	freq_tmp = np.copy(freq)	
+	freq_tmp = np.copy(freq)
+	
+	int_temp[int_temp > thermal] = thermal	
 	
 	if gauss == True:
 
@@ -682,7 +689,7 @@ def run_sim(freq,intensity,T,dV,S):
 		
 	else:
 	
-		int_temp[int_temp > thermal] = thermal
+		#int_temp[int_temp > thermal] = thermal
 		freq_sim = freq_tmp
 		int_sim = int_temp
 		
@@ -716,11 +723,11 @@ def modT(x):
 	
 	if gauss == False:
 
-		lines['current'] = ax.vlines(freq_sim,0,int_sim,linestyle = '-',color = 'red',label='current') #Plot sticks from TA down to 0 at each point in freq.
+		lines['current'] = ax.vlines(freq_sim,0,int_sim,linestyle = '-',color = 'red',label='current',zorder=500) #Plot sticks from TA down to 0 at each point in freq.
 
 	else:
 
-		lines['current'] = ax.plot(freq_sim,int_sim,color = 'red',label='current')
+		lines['current'] = ax.plot(freq_sim,int_sim,color = 'red',label='current',zorder=500)
 		
 	ax.legend()
 	fig.canvas.draw()
@@ -755,11 +762,11 @@ def modS(x):
 	
 	if gauss == False:
 
-		lines['current'] = ax.vlines(freq_sim,0,int_sim,linestyle = '-',color = 'red',label='current') #Plot sticks from TA down to 0 at each point in freq.
+		lines['current'] = ax.vlines(freq_sim,0,int_sim,linestyle = '-',color = 'red',label='current',zorder=500) #Plot sticks from TA down to 0 at each point in freq.
 
 	else:
 
-		lines['current'] = ax.plot(freq_sim,int_sim,color = 'red',label='current')
+		lines['current'] = ax.plot(freq_sim,int_sim,color = 'red',label='current',zorder=500)
 		
 	ax.legend()
 	fig.canvas.draw()
@@ -794,11 +801,11 @@ def moddV(x):
 	
 	if gauss == False:
 
-		lines['current'] = ax.vlines(freq_sim,0,int_sim,linestyle = '-',color = 'red',label='current') #Plot sticks from TA down to 0 at each point in freq.
+		lines['current'] = ax.vlines(freq_sim,0,int_sim,linestyle = '-',color = 'red',label='current',zorder=500) #Plot sticks from TA down to 0 at each point in freq.
 
 	else:
 
-		lines['current'] = ax.plot(freq_sim,int_sim,color = 'red',label='current')
+		lines['current'] = ax.plot(freq_sim,int_sim,color = 'red',label='current',zorder=500)
 		
 	ax.legend()
 	fig.canvas.draw()
@@ -833,11 +840,11 @@ def modVLSR(x):
 	
 	if gauss == False:
 
-		lines['current'] = ax.vlines(freq_sim,0,int_sim,linestyle = '-',color = 'red',label='current') #Plot sticks from TA down to 0 at each point in freq.
+		lines['current'] = ax.vlines(freq_sim,0,int_sim,linestyle = '-',color = 'red',label='current',zorder=500) #Plot sticks from TA down to 0 at each point in freq.
 
 	else:
 
-		lines['current'] = ax.plot(freq_sim,int_sim,color = 'red',label='current')
+		lines['current'] = ax.plot(freq_sim,int_sim,color = 'red',label='current',zorder=500)
 	
 	ax.legend()
 	fig.canvas.draw()
@@ -1051,11 +1058,11 @@ def recall(x):
 		
 	if gauss == False:
 
-		lines['current'] = ax.vlines(freq_sim,0,int_sim,linestyle = '-',color = 'red',label='current') #Plot sticks from TA down to 0 at each point in freq.
+		lines['current'] = ax.vlines(freq_sim,0,int_sim,linestyle = '-',color = 'red',label='current',zorder=500) #Plot sticks from TA down to 0 at each point in freq.
 
 	else:
 
-		lines['current'] = ax.plot(freq_sim,int_sim,color = 'red',label='current')	
+		lines['current'] = ax.plot(freq_sim,int_sim,color = 'red',label='current',zorder=500)	
 		
 	try:
 		plt.get_fignums()[0]	
@@ -1196,11 +1203,11 @@ def load_mol(x):
 	
 	if gauss == False:
 
-		lines['current'] = ax.vlines(freq_sim,0,int_sim,linestyle = '-',color = 'red',label='current') #Plot sticks from TA down to 0 at each point in freq.
+		lines['current'] = ax.vlines(freq_sim,0,int_sim,linestyle = '-',color = 'red',label='current',zorder=500) #Plot sticks from TA down to 0 at each point in freq.
 
 	else:
 
-		lines['current'] = ax.plot(freq_sim,int_sim,color = 'red',label='current')	
+		lines['current'] = ax.plot(freq_sim,int_sim,color = 'red',label='current',zorder=500)	
 
 	ax.legend()
 	fig.canvas.draw()	
@@ -1341,6 +1348,8 @@ def sum_stored():
 		tmp_int = scale_temp(tmp_int,sim[x].qns,sim[x].elower,sim[x].qn7,sim[x].qn8,sim[x].qn9,sim[x].qn10,sim[x].qn11,sim[x].qn12,sim[x].T,sim[x].CT,sim[x].catalog_file)
 		
 		tmp_int *= sim[x].S
+		
+		tmp_int[tmp_int > thermal] = thermal
 	
 		for y in range(len(tmp_int)):
 		
@@ -1368,7 +1377,7 @@ def overplot_sum():
 	if any(line for line in ax.lines if line.get_label()=='sum'):
 		clear_line('sum')
 	
-	lines['sum'] = ax.plot(freq_sum,int_sum,color = line_color, label = 'sum', gid='sum', linestyle = '-',zorder=5000)
+	lines['sum'] = ax.plot(freq_sum,int_sum,color = line_color, label = 'sum', gid='sum', linestyle = '-',zorder=25)
 	
 	ax.legend()
 	fig.canvas.draw()

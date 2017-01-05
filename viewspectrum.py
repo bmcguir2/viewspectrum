@@ -60,6 +60,8 @@ first_run = True
 
 auto_update = False
 
+thermal = float('inf') #initial default cutoff for optically-thick lines (i.e. don't touch them unless thermal is modified.)
+
 T = 300 #temperature for simulations.  Default is 300 K.
 
 catalog_file = None #catalog file to load in.  Needs to be a string.
@@ -1246,9 +1248,9 @@ def save_results(x):
 		output.write('molecule:\t{}\n' .format(current))
 		output.write('obs:\t{}\n' .format(spec))
 		output.write('T:\t{} K\n' .format(T))
-		output.write('S:\t{}\n' .format(S))
-		output.write('dV:\t{} km/s\n' .format(dV))
-		output.write('VLSR:\t{} km/s\n' .format(vlsr))
+		output.write('S:\t{:.2f}\n' .format(S))
+		output.write('dV:\t{:.2f} km/s\n' .format(dV))
+		output.write('VLSR:\t{:.2f} km/s\n' .format(vlsr))
 		output.write('ll:\t{} MHz\n' .format(ll))
 		output.write('ul:\t{} MHz\n' .format(ul))
 		output.write('CT:\t{} K\n' .format(CT))
@@ -1262,7 +1264,7 @@ def save_results(x):
 	
 		for molecule in sim:
 		
-			output.write('{}\t{}\t{}\t{}\t{}\t{}\t{}\n' .format(sim[molecule].name,sim[molecule].T,sim[molecule].S,sim[molecule].dV,sim[molecule].vlsr,sim[molecule].CT,sim[molecule].catalog_file))
+			output.write('{}\t{}\t{:.2f}\t{:.2f}\t{:.2f}\t{}\t{}\n' .format(sim[molecule].name,sim[molecule].T,sim[molecule].S,sim[molecule].dV,sim[molecule].vlsr,sim[molecule].CT,sim[molecule].catalog_file))
 			
 		output.write('\n#### Active Graph Status ####\n\n')
 		
@@ -1379,7 +1381,7 @@ def restore(x):
 	restores the state of the program from a save file, loading all stored spectra into memory, loads the previously active simulation into current, and restores the last active graph. x is a string with the filename of the restore file. The catalog files must be present, and named to match those in the save file.
 	'''
 
-	global frequency,logint,qn7,qn8,qn9,qn10,qn11,qn12,elower,eupper,intensity,qns,catalog,catalog_file,fig,current,fig,ax,freq_sim,int_sim,T,dV,S,vlsr,ll,ul,CT,gauss,first_run
+	global frequency,logint,qn7,qn8,qn9,qn10,qn11,qn12,elower,eupper,intensity,qns,catalog,catalog_file,fig,current,fig,ax,freq_sim,int_sim,T,dV,S,vlsr,ll,ul,CT,gauss,first_run,thermal
 
 	#read in the save file as an array line by line
 	
@@ -1440,7 +1442,7 @@ def restore(x):
 		gauss = False
 	ll = float(active_array[6].split('\t')[1].strip(' MHz\n'))
 	ul = float(active_array[7].split('\t')[1].strip(' MHz\n'))
-	thermal = active_array[11].split('\t')[1].strip('\n')
+	thermal = float(active_array[11].split('\t')[1].strip(' K\n'))
 	
 	#OK, now time to do the hard part.  As one always should, let's start with the middle part of the whole file, and load and then store all of the simulations.
 	
@@ -1567,8 +1569,6 @@ int_sim = []
 
 freq_sum = [] #to hold combined spectra
 int_sum = []
-
-thermal = float('inf') #initial default cutoff for optically-thick lines (i.e. don't touch them unless thermal is modified.)
 
 current = catalog_file
 

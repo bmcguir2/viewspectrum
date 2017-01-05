@@ -998,8 +998,6 @@ def recall(x):
 	save_results('last.results')
 
 	global elower,eupper,qns,logint,qn7,qn8,qn9,qn10,qn11,qn12,S,dV,T,vlsr,frequency,freq_sim,intensity,int_sim,current
-	
-	plt.close()
 
 	current = sim[x].name
 	elower = sim[x].elower
@@ -1020,8 +1018,30 @@ def recall(x):
 	freq_sim = sim[x].freq_sim
 	intensity = sim[x].intensity
 	int_sim = sim[x].int_sim
+	catalog_file = sim[x].catalog_file
+
+	try:
+		clear_line('current')
+	except:
+		pass
 		
-	make_plot()	
+	if gauss == False:
+
+		lines['current'] = ax.vlines(freq_sim,0,int_sim,linestyle = '-',color = 'red',label='current') #Plot sticks from TA down to 0 at each point in freq.
+
+	else:
+
+		lines['current'] = ax.plot(freq_sim,int_sim,color = 'red',label='current')	
+		
+	try:
+		plt.get_fignums()[0]	
+		ax.legend()
+		fig.canvas.draw()
+	except:	
+		make_plot()	
+		
+	save_results('last.results')	
+	
 
 #overplot overplots a previously-stored simulation on the current plot in a color other than red, but does not touch the simulation active in the main program. 'x' must be entered as a string with quotes.
 
@@ -1192,7 +1212,7 @@ def save_results(x):
 		
 		output.write('#### Active Simulation ####\n\n')
 	
-		output.write('catalog_file:\t{}\n' .format(current))
+		output.write('molecule:\t{}\n' .format(current))
 		output.write('obs:\t{}\n' .format(spec))
 		output.write('T:\t{} K\n' .format(T))
 		output.write('S:\t{}\n' .format(S))
@@ -1201,7 +1221,8 @@ def save_results(x):
 		output.write('ll:\t{} MHz\n' .format(ll))
 		output.write('ul:\t{} MHz\n' .format(ul))
 		output.write('CT:\t{} K\n' .format(CT))
-		output.write('gauss:\t{}\n\n' .format(gauss))
+		output.write('gauss:\t{}\n' .format(gauss))
+		output.write('catalog_file:\t{}\n\n' .format(catalog_file))
 	
 		output.write('#### Stored Simulations ####\n\n')
 		
@@ -1399,12 +1420,12 @@ def restore(x):
 		CT = float(stored_array[i].split('\t')[5])
 		catalog_file = str(stored_array[i].split('\t')[6]).strip('\n').strip()
 		
-		try:
-			first_run = True
-			load_mol(catalog_file)
-		except FileNotFoundError:
-			print('I was unable to locate the catalog file {} for molecule entry {}.  Sorry.' .format(catalog_file,name))
-			return
+# 		try:
+		first_run = True
+		load_mol(catalog_file)
+# 		except FileNotFoundError:
+# 			print('I was unable to locate the catalog file {} for molecule entry {}.  Sorry.' .format(catalog_file,name))
+# 			return
 			
 		store(name)
 		
@@ -1412,7 +1433,7 @@ def restore(x):
 	
 	#Now we move on to loading in the currently-active molecule
 	
-	catalog_file = active_array[0].split('\t')[1].strip('\n')
+	catalog_file = active_array[10].split('\t')[1].strip('\n')
 	try:
 		obs = active_array[1].split('\t')[1].strip('\n')
 		read_obs(obs)
@@ -1423,6 +1444,7 @@ def restore(x):
 	dV = float(active_array[4].split('\t')[1].strip(' km/s\n'))
 	vlsr = float(active_array[5].split('\t')[1].strip(' km/s\n'))
 	CT = float(active_array[8].split('\t')[1].strip(' K\n'))
+	current = active_array[0].split('\t')[1].strip('\n')
 	
 	try:
 		first_run = True

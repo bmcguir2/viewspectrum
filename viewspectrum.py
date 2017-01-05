@@ -427,6 +427,10 @@ def calc_q(qns,elower,qn7,qn8,qn9,qn10,qn11,qn12,T,catalog_file):
 	
 		Q = 4.83410*10**-11*T**6 - 4.04024*10**-8*T**5 + 1.27624*10**-5*T**4 - 1.83807*10**-3*T**3 + 2.05911*10**-1*T**2 + 4.39632*10**-1*T -1.25670
 		
+	elif catalog_file.lower()=='13methanol.cat' or catalog_file.lower()=='13ch3oh.cat':
+	
+		Q = 0.000050130*T**3 + 0.076540934*T**2 + 4.317920731*T - 31.876881967
+	
 	else:
 	
 		nstates = elower.size #Determine the number of total states in the raw cat file

@@ -666,7 +666,7 @@ def run_sim(freq,intensity,T,dV,S):
 
 	int_temp *= S
 	
-	freq_tmp = np.copy(catalog[0])
+	freq_tmp = np.copy(freq)
 	
 	freq_tmp += (-vlsr)*freq_tmp/ckm		
 	
@@ -997,7 +997,7 @@ def recall(x):
 
 	save_results('last.results')
 
-	global elower,eupper,qns,logint,qn7,qn8,qn9,qn10,qn11,qn12,S,dV,T,vlsr,frequency,freq_sim,intensity,int_sim,current
+	global elower,eupper,qns,logint,qn7,qn8,qn9,qn10,qn11,qn12,S,dV,T,vlsr,frequency,freq_sim,intensity,int_sim,current,catalog_file
 
 	current = sim[x].name
 	elower = sim[x].elower
@@ -1024,6 +1024,12 @@ def recall(x):
 		clear_line('current')
 	except:
 		pass
+		
+	tmp_freq = np.copy(frequency)
+	
+	tmp_freq += (-vlsr)*tmp_freq/ckm
+	
+	freq_sim,int_sim=run_sim(tmp_freq,intensity,T,dV,S)	
 		
 	if gauss == False:
 
@@ -1194,8 +1200,7 @@ def clear_line(x):
 		ax.legend()
 		fig.canvas.draw()
 	except:
-		print('No line labeled {} is on the current plot.' .format(x))
-		return
+		pass
 
 #save_results prints out a file with all of the parameters for each molecule *which has been stored.*  It will not print the active molecule unless it has been stored. 'x' must be a string, and the output will go to there.
 
@@ -1248,7 +1253,8 @@ def status():
 	prints the current status of the program and the various key variables
 	'''
 
-	print('Current Molecule or Catalog:\t {}' .format(current))
+	print('Current Molecule:\t {}' .format(current))
+	print('Current Catalog:\t {}' .format(catalog_file))
 	print('Current lab or observation: \t {}' .format(spec))
 	print('T: \t {} K' .format(T))
 	print('S: \t {}' .format(S))

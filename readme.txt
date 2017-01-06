@@ -79,6 +79,10 @@ Once you are happy with the way your simulation looks, store it into memory with
 
 > store('x')
 
+Or, call it empty and it will save the name using the basename of the catalog file (everything up to the first period):
+
+> store()
+
 You can see a (not terribly nicely formatted, yet) summary of what you have stored:
 
 > sim

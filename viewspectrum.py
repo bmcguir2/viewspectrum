@@ -544,11 +544,11 @@ def scale_temp(int_sim,qns,elower,qn7,qn8,qn9,qn10,qn11,qn12,T,CT,catalog_file):
 	
 	scaled_int = int_sim * (Q_CT/Q_T) * exp(-(((1/T)-(1/CT))*elower)/0.695)
 	
-	for i in range(len(scaled_int)):
-	
-		if catalog[1][i] > error_limit:
-		
-			scaled_int[i] = 0.0
+# 	for i in range(len(scaled_int)):
+# 	
+# 		if catalog[1][i] > error_limit:
+# 		
+# 			scaled_int[i] = 0.0
 
 	return scaled_int
 

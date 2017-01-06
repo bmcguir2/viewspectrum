@@ -44,8 +44,8 @@ Load the program into iPython.
 
 Set the lower and upper limits (no, seriously) to x and y MHz.
 
-> ll x
-> ul y
+> ll = x
+> ul = y
 
 Load a molecule into the program from catalog x. This will pop up a graph with the simulation.  
 

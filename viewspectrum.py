@@ -18,6 +18,7 @@
 # 2.0 - dynamically-updating plots
 # 3.0 - store and plot multiple species, switches to requiring ipython
 # 3.1 - restore from save file
+# 3.2 - add filter by error limit
 
 #############################################################
 #							Preamble						#
@@ -45,7 +46,7 @@ import matplotlib.lines as mlines
 from datetime import datetime, date, time
 #warnings.filterwarnings('error')
 
-version = 3.1
+version = 3.2
 
 h = 6.626*10**(-34) #Planck's constant in J*s
 k = 1.381*10**(-23) #Boltzmann's constant in J/K
@@ -59,6 +60,8 @@ ckm = 2.998*10**5 #speed of light in km/s
 first_run = True
 
 auto_update = False
+
+error_limit = float('inf')
 
 thermal = float('inf') #initial default cutoff for optically-thick lines (i.e. don't touch them unless thermal is modified.)
 
@@ -540,6 +543,12 @@ def scale_temp(int_sim,qns,elower,qn7,qn8,qn9,qn10,qn11,qn12,T,CT,catalog_file):
 	Q_CT = calc_q(qns,elower,qn7,qn8,qn9,qn10,qn11,qn12,CT,catalog_file)
 	
 	scaled_int = int_sim * (Q_CT/Q_T) * exp(-(((1/T)-(1/CT))*elower)/0.695)
+	
+	for i in range(len(scaled_int)):
+	
+		if catalog[1][i] > error_limit:
+		
+			scaled_int[i] = 0.0
 
 	return scaled_int
 

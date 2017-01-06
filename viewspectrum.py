@@ -437,6 +437,10 @@ def calc_q(qns,elower,qn7,qn8,qn9,qn10,qn11,qn12,T,catalog_file):
 	elif catalog_file.lower()=='13methanol.cat' or catalog_file.lower()=='13ch3oh.cat':
 	
 		Q = 0.000050130*T**3 + 0.076540934*T**2 + 4.317920731*T - 31.876881967
+		
+	elif catalog_file.lower()=='c2n.cat' or catalog_file.lower()=='ccn.cat':
+		
+		Q = 1.173755*10**(-11)*T**6 - 1.324086*10**(-8)*T**5 + 5.99936*10**(-6)*T**4 - 1.40473*10**(-3)*T**3 + 0.1837397*T**2 + 7.135161*T + 22.55770
 	
 	else:
 	
@@ -594,7 +598,8 @@ def sim_gaussian(int_sim,freq,linewidth):
 			
 			ttotal = (tstep * int_sim.shape[0])/60
 		
-			print('You have asked for a computationally-expensive simulation.  Either wait for it to finish, or narrow up your frequency range by setting ll or ul.  A (probably very poor) estimation of the time remaining is: {:.2f} minutes.' .format(ttotal))
+			print('You have asked for a computationally-expensive simulation.  Either wait for it to finish, or narrow up your frequency range by setting ll or ul.')
+			print('A (probably very poor) estimation of the time remaining is: {:.2f} minutes.' .format(ttotal))
 			
 			alerted = True 
 	

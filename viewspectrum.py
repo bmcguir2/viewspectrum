@@ -18,7 +18,7 @@
 # 2.0 - dynamically-updating plots
 # 3.0 - store and plot multiple species, switches to requiring ipython
 # 3.1 - restore from save file
-# 3.2 - add filter by error limit
+# 3.2 - added a default value to store
 
 #############################################################
 #							Preamble						#
@@ -1009,11 +1009,15 @@ def close():
 	
 #store saves the current simulation parameters for recall later.  *Not* saved as a Gaussian. 'x' must be entered as a string with quotes.
 
-def store(x):
+def store(x=None):
 
 	'''
 	saves the current simulation parameters for recall later.  *Not* saved as a Gaussian. 'x' must be entered as a string with quotes.
 	'''
+	
+	if x == None:
+	
+		x = '{}' .format(catalog_file.split('.')[0]) 
 	
 	sim[x] = Molecule(x,catalog_file,elower,eupper,qns,logint,qn7,qn8,qn9,qn10,qn11,qn12,S,dV,T,CT,vlsr,frequency,freq_sim,intensity,int_sim)
 	
@@ -1259,7 +1263,16 @@ def clear_line(x):
 		ax.legend()
 		fig.canvas.draw()		
 
+#clear is an alias for clear_line
 
+def clear(x):
+
+	'''
+	Alias for clear_line()
+	'''
+
+	clear_line(x)
+	
 #save_results prints out a file with all of the parameters for each molecule *which has been stored.*  It will not print the active molecule unless it has been stored. 'x' must be a string, and the output will go to there.
 
 def save_results(x):

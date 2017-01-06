@@ -4,7 +4,7 @@
 #                                                   #
 #####################################################
 
-Last Updated: Jan 4, 2017
+Last Updated: Jan 6, 2017
 
 This program is designed to read molecular data from an SPCAT formatted catalog file, and simulate a spectrum of the molecule, given a variety of parameters.  It can provide stick spectra or Gaussian simulations (at some computational expense for large numbers of lines).  It can plot those spectra over a laboratory or observational spectrum.  Simulations can be stored into memory, and a combined simulation of all molecules can be generated and displayed.  Simulations can be written out to and ascii file.  The current state of the program is written to a (human-readable) output file (default: last.results), and manual saves can also be performed.  The program can restore to the state of any save file, if the appropriate catalogs are present as well.
 
@@ -36,7 +36,7 @@ Finally, note that the program is calculating partition functions on demand from
 #                                                   #
 #####################################################
 
-This program is designed to run from inside iPython.
+This program is designed to run from inside iPython.  You can get some help on any of these functions from within the program with help(function).
 
 Load the program into iPython.
 
@@ -122,6 +122,10 @@ Once you have a few stored simulations, it can be useful to see a co-added spect
 Then, overplot the result with a special function, which ensure it's in a color that will never ever be used for anything else (just as black is always observations and red is always the active simulation):
 
 > overplot_sum()
+
+If you need to change the legend on the figure, you can do that, too, by making it x number of columns, and with a font-size lsize, which can be a float, int, or a string (see help file for possible options for strings).
+
+> fix_legend(x,lsize)
 
 If you want to clear an over-plotted spectrum x back off the plot, you can do that:
 

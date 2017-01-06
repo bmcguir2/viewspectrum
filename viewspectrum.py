@@ -1012,7 +1012,7 @@ def close():
 def store(x=None):
 
 	'''
-	saves the current simulation parameters for recall later.  *Not* saved as a Gaussian. 'x' must be entered as a string with quotes.
+	saves the current simulation parameters for recall later.  *Not* saved as a Gaussian. 'x' must be entered as a string with quotes.  If used with just store(), it defaults the name to everything up to the first period in the catalog_file name.
 	'''
 	
 	if x == None:

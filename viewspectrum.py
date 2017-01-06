@@ -1095,10 +1095,10 @@ def recall(x):
 
 #overplot overplots a previously-stored simulation on the current plot in a color other than red, but does not touch the simulation active in the main program. 'x' must be entered as a string with quotes.
 
-def overplot(x):
+def overplot(x,cchoice=None):
 
 	'''
-	overplots a previously-stored simulation on the current plot in a color other than red, but does not touch the simulation active in the main program. 'x' must be entered as a string with quotes.
+	overplots a previously-stored simulation on the current plot in a color other than red, but does not touch the simulation active in the main program. 'x' must be entered as a string with quotes.  Defaults to choosing a color from a large pool of random colors.  you can specify a color by giving it a string as the second variable.  The string is either a hex color code, or one of the few matplotlib defaults like 'red' 'green' 'blue'.
 	'''
 
 	global elower,eupper,qns,logint,qn7,qn8,qn9,qn10,qn11,qn12,S,dV,T,vlsr,frequency,freq_sim,intensity,int_sim,current,fig,ax
@@ -1114,11 +1114,17 @@ def overplot(x):
 	int_sim = sim[x].int_sim
 
 	if any(line for line in ax.lines if line.get_label()==sim[x].name):
-		line_color = [line.get_color() for line in ax.lines if line.get_label()==sim[x].name][0]
+		if cchoice == None:
+			line_color = [line.get_color() for line in ax.lines if line.get_label()==sim[x].name][0]
+		else:
+			line_color = cchoice
 		line_style = [line.get_linestyle() for line in ax.lines if line.get_label()==sim[x].name][0]
 		clear_line(sim[x].name)
 	else:
-		line_color = next(colors)
+		if cchoice == None:
+			line_color = next(colors)
+		else:
+			line_color = cchoice
 		line_style = '-'		
 
 #Not working at the moment

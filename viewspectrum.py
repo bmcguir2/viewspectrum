@@ -371,6 +371,7 @@ def det_qns(qn7,qn8,qn9,qn10,qn11,qn12):
 		pass
 	except IndexError:
 		print('There are no lines in the chosen range.  The program is about to crash, sorry.  I will fix this at some point.')
+		print('Catalog file is: {}.' .format(catalog_file))
 		
 	try:
 		int(qn9[0])
@@ -1173,6 +1174,12 @@ def load_mol(x):
 	raw_array = read_cat(catalog_file)
 
 	trimmed_array = trim_raw_array(raw_array)
+	
+	try:
+		trimmed_array[0]
+	except:
+		print('There were no lines in the frequency range for {}.' .format(x))
+		return False
 
 	catalog = splice_array(trimmed_array)
 
@@ -1205,13 +1212,13 @@ def load_mol(x):
 	if first_run == True:
 		make_plot()
 		first_run = False
-		return
+		return True
 	else:
 		try:
 			plt.get_fignums()[0]
 		except:	
 			make_plot()
-			return
+			return True
 		
 	#if there is a plot open, we just update the current simulation
 	
@@ -1227,6 +1234,8 @@ def load_mol(x):
 	fig.canvas.draw()	
 	
 	save_results('last.results')
+	
+	return True
 		
 #clear_line removes a line labeled 'x' from the current plot window.  x must be a string
 
@@ -1481,7 +1490,12 @@ def restore(x):
 		
 # 		try:
 		first_run = True
-		load_mol(catalog_file)
+		try:
+			foo = load_mol(catalog_file)
+			if foo == False:
+				raise ValueError()
+		except ValueError:
+			continue
 # 		except FileNotFoundError:
 # 			print('I was unable to locate the catalog file {} for molecule entry {}.  Sorry.' .format(catalog_file,name))
 # 			return

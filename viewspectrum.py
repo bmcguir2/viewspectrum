@@ -1413,7 +1413,11 @@ def restore(x):
 	restores the state of the program from a save file, loading all stored spectra into memory, loads the previously active simulation into current, and restores the last active graph. x is a string with the filename of the restore file. The catalog files must be present, and named to match those in the save file.
 	'''
 
-	global frequency,logint,qn7,qn8,qn9,qn10,qn11,qn12,elower,eupper,intensity,qns,catalog,catalog_file,fig,current,fig,ax,freq_sim,int_sim,T,dV,S,vlsr,ll,ul,CT,gauss,first_run,thermal
+	global frequency,logint,qn7,qn8,qn9,qn10,qn11,qn12,elower,eupper,intensity,qns,catalog,catalog_file,fig,current,fig,ax,freq_sim,int_sim,T,dV,S,vlsr,ll,ul,CT,gauss,first_run,thermal,sim
+	
+	#empty out the previously-stored simulations
+	
+	sim = {}
 
 	#read in the save file as an array line by line
 	
@@ -1558,6 +1562,18 @@ def restore(x):
 	#If we made it here, we were successful, so let's print out what we did
 	
 	print('Successfully restored from file {} which was saved on {} at {}.' .format(x,restore_date,restore_time))	
+	
+#fix_legend allows you to change the legend to meet its size needs.
+
+def fix_legend(x,lsize):
+
+	'''
+	Modifies the legend to have x columns.  lsize must be a string. 'xx-small' 'x-small' and 'small' all work.
+	'''
+
+	plt.legend(ncol=x,prop={'size':lsize})
+	
+	fig.canvas.draw()	
 	
 #############################################################
 #							Classes for Storing Results		#

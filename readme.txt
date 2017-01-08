@@ -4,7 +4,7 @@
 #                                                   #
 #####################################################
 
-Last Updated: Jan 6, 2017
+Last Updated: Jan 8, 2017
 
 This program is designed to read molecular data from an SPCAT formatted catalog file, and simulate a spectrum of the molecule, given a variety of parameters.  It can provide stick spectra or Gaussian simulations (at some computational expense for large numbers of lines).  It can plot those spectra over a laboratory or observational spectrum.  Simulations can be stored into memory, and a combined simulation of all molecules can be generated and displayed.  Simulations can be written out to and ascii file.  The current state of the program is written to a (human-readable) output file (default: last.results), and manual saves can also be performed.  The program can restore to the state of any save file, if the appropriate catalogs are present as well.
 
@@ -42,7 +42,7 @@ Load the program into iPython.
 
 > %run -i viewspectrum.py
 
-Set the lower and upper limits (no, seriously) to x and y MHz.
+Set the lower and upper limits (no, seriously) to x and y MHz.  These can be single values (either int or float), or can be an array of start and stop value pairs.  i.e. for 50 - 55 GHz and 60 - 65 GHz, specify ll = [50000,60000] ul = [55000,65000]. 
 
 > ll = x
 > ul = y

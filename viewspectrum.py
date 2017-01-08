@@ -19,6 +19,7 @@
 # 3.0 - store and plot multiple species, switches to requiring ipython
 # 3.1 - restore from save file
 # 3.2 - added a default value to store
+# 3.3 - adding option for multi-frequency ranges in ll and ul
 
 #############################################################
 #							Preamble						#
@@ -46,7 +47,7 @@ import matplotlib.lines as mlines
 from datetime import datetime, date, time
 #warnings.filterwarnings('error')
 
-version = 3.2
+version = 3.3
 
 h = 6.626*10**(-34) #Planck's constant in J*s
 k = 1.381*10**(-23) #Boltzmann's constant in J/K
@@ -126,21 +127,32 @@ def trim_raw_array(x):
 	
 		tmp_array[line] = float(str(x[line][:13]).strip())
 		
-	
-	try:
-		i = np.where(tmp_array > ll)[0][0]	#get the index of the first value above the lower limit
-	except IndexError:
-		i = 0								#if the catalog begins after the lower limit
-	try:
-		i2 = np.where(tmp_array > ul)[0][0]	#get the index of the first value above the upper limit
-	except IndexError:
-		i2 = len(tmp_array)					#if the catalog ends before the upper limit is reached
-		
 	trimmed_array = []
-
-	for y in range(i,i2):
 	
-		trimmed_array.append(x[y])
+	if type(ll) == int or type(ll) == float:
+	
+		tmp_ll = [ll]
+		tmp_ul = [ul]
+		
+	else:
+	
+		tmp_ll = list(ll)
+		tmp_ul = list(ul)
+		
+	for z in range(len(tmp_ll)):		
+	
+		try:
+			i = np.where(tmp_array > tmp_ll[z])[0][0]	#get the index of the first value above the lower limit
+		except IndexError:
+			i = 0								#if the catalog begins after the lower limit
+		try:
+			i2 = np.where(tmp_array > tmp_ul[z])[0][0]	#get the index of the first value above the upper limit
+		except IndexError:
+			i2 = len(tmp_array)					#if the catalog ends before the upper limit is reached
+
+		for y in range(i,i2):
+	
+			trimmed_array.append(x[y])
 		
 	return trimmed_array				
 	

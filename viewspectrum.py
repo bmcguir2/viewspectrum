@@ -118,7 +118,7 @@ def read_cat(catalog_file):
 def trim_raw_array(x):
 
 	'''
-	takes the raw array and trims it at the specified ll and ul
+	takes the raw array and trims it at the specified ll and ul.  ll and ul can be either single values (int or float) or an array of such, i.e. ll = [min1,min2] ul = [max1,max2]
 	'''
 
 	tmp_array = np.arange(len(x),dtype=np.float)	#create a temporary array to splice out the frequency
@@ -1507,8 +1507,20 @@ def restore(x):
 		gauss = True
 	else:
 		gauss = False
-	ll = float(active_array[6].split('\t')[1].strip(' MHz\n'))
-	ul = float(active_array[7].split('\t')[1].strip(' MHz\n'))
+	try:
+		ll = float(active_array[6].split('\t')[1].strip(' MHz\n'))
+	except ValueError:
+		ll = []
+		tmp_str = active_array[6].split('\t')[1].strip(' MHz\n').strip(']').strip('[').split(',')
+		for line in range(len(tmp_str)):
+			ll.append(float(tmp_str[line]))
+	try:	
+		ul = float(active_array[7].split('\t')[1].strip(' MHz\n'))
+	except ValueError:
+		ul = []
+		tmp_str = active_array[7].split('\t')[1].strip(' MHz\n').strip(']').strip('[').split(',')
+		for line in range(len(tmp_str)):
+			ul.append(float(tmp_str[line]))
 	thermal = float(active_array[11].split('\t')[1].strip(' K\n'))
 	
 	#OK, now time to do the hard part.  As one always should, let's start with the middle part of the whole file, and load and then store all of the simulations.

@@ -20,6 +20,7 @@
 # 3.1 - restore from save file
 # 3.2 - added a default value to store
 # 3.3 - adding option for multi-frequency ranges in ll and ul
+# 3.4 - adds flag to use for reading in spectra
 
 #############################################################
 #							Preamble						#
@@ -63,6 +64,8 @@ first_run = True
 auto_update = False
 
 error_limit = float('inf')
+
+GHz = False
 
 thermal = float('inf') #initial default cutoff for optically-thick lines (i.e. don't touch them unless thermal is modified.)
 
@@ -1002,6 +1005,10 @@ def read_obs(x):
 		freq_obs.append(float(obs[x].split()[0]))
 		int_obs.append(float(obs[x].split()[1].strip('\n')))
 		
+	if GHz == True:
+	
+		freq_obs[:] = [x*1000.0 for x in freq_obs]
+		
 	try:		
 		lines['obs'] = 	ax.plot(freq_obs,int_obs,color = 'black',label='obs',zorder=0)
 	except:
@@ -1317,7 +1324,8 @@ def save_results(x):
 		output.write('CT:\t{} K\n' .format(CT))
 		output.write('gauss:\t{}\n' .format(gauss))
 		output.write('catalog_file:\t{}\n' .format(catalog_file))
-		output.write('thermal:\t{} K\n\n' .format(thermal))
+		output.write('thermal:\t{} K\n' .format(thermal))
+		output.write('GHz:\t{}\n\n' .format(GHz))
 	
 		output.write('#### Stored Simulations ####\n\n')
 		
@@ -1500,13 +1508,26 @@ def restore(x):
 	
 		graph_array.append(restore_array[i])
 		
-	#just to be safe, let's set the upper limits, lower limits, gaussian toggles, and thermal values now.
+	#just to be safe, let's set the upper limits, lower limits, gaussian toggles, thermal values, and GHz flag now.
 	
+	
+	#are we simulating Gaussians?
 	
 	if active_array[9].split('\t')[1].strip('\n') == 'True':
 		gauss = True
 	else:
 		gauss = False
+		
+	#are observations read in in GHz?
+	
+	if active_array[12].split('\t')[1].strip('\n') == 'True':
+		GHz = True
+		print('Yes')
+	else:
+		GHz = False	
+	
+	#set the lower limit.  requires some logical to differentiate between a single value and a list	
+		
 	try:
 		ll = float(active_array[6].split('\t')[1].strip(' MHz\n'))
 	except ValueError:
@@ -1514,6 +1535,9 @@ def restore(x):
 		tmp_str = active_array[6].split('\t')[1].strip(' MHz\n').strip(']').strip('[').split(',')
 		for line in range(len(tmp_str)):
 			ll.append(float(tmp_str[line]))
+			
+	#set the upper limit.  requires some logical to differentiate between a single value and a list		
+	
 	try:	
 		ul = float(active_array[7].split('\t')[1].strip(' MHz\n'))
 	except ValueError:
@@ -1521,6 +1545,8 @@ def restore(x):
 		tmp_str = active_array[7].split('\t')[1].strip(' MHz\n').strip(']').strip('[').split(',')
 		for line in range(len(tmp_str)):
 			ul.append(float(tmp_str[line]))
+	
+	
 	thermal = float(active_array[11].split('\t')[1].strip(' K\n'))
 	
 	#OK, now time to do the hard part.  As one always should, let's start with the middle part of the whole file, and load and then store all of the simulations.
@@ -1631,6 +1657,18 @@ def purge(x):
 	except KeyError:
 		print('No simulation with that key in the simulation dictionary.  Type \'sim\' to see an (ugly) list of stored simulations.')
 	
+#use_GHz changes the read-in default for observations from MHz to GHz.  This will just convert the read-in frequencies to MHz.
+
+def use_GHz():
+
+	'''
+	changes the read-in default for observations from MHz to GHz.  This will just convert the read-in frequencies to MHz.
+	'''
+
+	global GHz
+	
+	GHz = True
+
 #############################################################
 #							Classes for Storing Results		#
 #############################################################	

@@ -1008,7 +1008,7 @@ def read_obs(x):
 			
 		coords = obs[1].split('[[')[1].strip(']]\n')	
 		
-		del obs[:8]
+		del obs[:7]
 	
 	global freq_obs,int_obs
 

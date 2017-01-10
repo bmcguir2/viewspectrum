@@ -21,6 +21,7 @@
 # 3.2 - added a default value to store
 # 3.3 - adding option for multi-frequency ranges in ll and ul
 # 3.4 - adds flag to use for reading in spectra
+# 3.5 - adds logic to detect import of directly-exported casa spectra
 
 #############################################################
 #							Preamble						#
@@ -48,7 +49,7 @@ import matplotlib.lines as mlines
 from datetime import datetime, date, time
 #warnings.filterwarnings('error')
 
-version = 3.4
+version = 3.5
 
 h = 6.626*10**(-34) #Planck's constant in J*s
 k = 1.381*10**(-23) #Boltzmann's constant in J/K
@@ -66,6 +67,8 @@ auto_update = False
 error_limit = float('inf')
 
 GHz = False
+
+coords = None
 
 thermal = float('inf') #initial default cutoff for optically-thick lines (i.e. don't touch them unless thermal is modified.)
 
@@ -986,14 +989,26 @@ def obs_on():
 def read_obs(x):
 
 	'''
-	reads in observations or laboratory spectra and populates freq_obs and int_obs
+	reads in observations or laboratory spectra and populates freq_obs and int_obs.  will detect a standard .ispec header from casaviewer export, and will apply a GHz flag if necessary, as well as populating the coords variable with the coordinates from the header.
 	'''
 
-	global spec
+	global spec, coords, GHz
 
 	spec = x
 
 	obs = read_cat(x)
+	
+	#check to see if these are casa spectra
+	
+	if obs[0].split(':')[0] == '#title':
+	
+		if obs[3].split('(')[1].strip(')\n') == 'GHz':
+		
+			GHz = True
+			
+		coords = obs[1].split('[[')[1].strip(']]\n')	
+		
+		del obs[:8]
 	
 	global freq_obs,int_obs
 

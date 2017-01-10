@@ -1539,7 +1539,6 @@ def restore(x):
 	
 	if active_array[12].split('\t')[1].strip('\n') == 'True':
 		GHz = True
-		print('Yes')
 	else:
 		GHz = False	
 	

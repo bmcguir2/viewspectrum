@@ -4,7 +4,7 @@
 #                                                   #
 #####################################################
 
-Last Updated: Jan 8, 2017
+Last Updated: Jan 10, 2017
 
 This program is designed to read molecular data from an SPCAT formatted catalog file, and simulate a spectrum of the molecule, given a variety of parameters.  It can provide stick spectra or Gaussian simulations (at some computational expense for large numbers of lines).  It can plot those spectra over a laboratory or observational spectrum.  Simulations can be stored into memory, and a combined simulation of all molecules can be generated and displayed.  Simulations can be written out to and ascii file.  The current state of the program is written to a (human-readable) output file (default: last.results), and manual saves can also be performed.  The program can restore to the state of any save file, if the appropriate catalogs are present as well.
 
@@ -54,6 +54,10 @@ Load a molecule into the program from catalog x. This will pop up a graph with t
 Compare the simulation to some observations or laboratory data you have in ascii format (frequency intensity) from file 'x'.  Delimiter doesn't matter, as long as it is consistent.
 
 > read_obs('x')
+
+If your observations are in GHz, you can set a flag in the program so that they are read in and appropriately converted to MHz.  This flag will be saved, and any restore will then know to restore properly as well.  Must do this before calling read_obs().
+
+> use_GHz()
 
 You can toggle these observations on and off in the plot:
 

@@ -51,11 +51,11 @@ Load a molecule into the program from catalog x. This will pop up a graph with t
 
 > load_mol('x')
 
-Compare the simulation to some observations or laboratory data you have in ascii format (frequency intensity) from file 'x'.  Delimiter doesn't matter, as long as it is consistent.
+Compare the simulation to some observations or laboratory data you have in ascii format (frequency intensity) from file 'x'.  Delimiter doesn't matter, as long as it is consistent.  Will detect a standard .ispec header from casaviewer export, and will apply a GHz flag (see below) automatically if necessary, as well as populating the 'coords' variable with the coordinates from the header.
 
 > read_obs('x')
 
-If your observations are in GHz, you can set a flag in the program so that they are read in and appropriately converted to MHz.  This flag will be saved, and any restore will then know to restore properly as well.  Must do this before calling read_obs().
+If your observations are in GHz, you can set a flag in the program so that they are read in and appropriately converted to MHz.  This flag will be saved, and any restore will then know to restore properly as well.  Must do this before calling read_obs().  
 
 > use_GHz()
 

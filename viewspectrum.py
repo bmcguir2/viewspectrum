@@ -1467,7 +1467,7 @@ def restore(x):
 	restores the state of the program from a save file, loading all stored spectra into memory, loads the previously active simulation into current, and restores the last active graph. x is a string with the filename of the restore file. The catalog files must be present, and named to match those in the save file.
 	'''
 
-	global frequency,logint,qn7,qn8,qn9,qn10,qn11,qn12,elower,eupper,intensity,qns,catalog,catalog_file,fig,current,fig,ax,freq_sim,int_sim,T,dV,S,vlsr,ll,ul,CT,gauss,first_run,thermal,sim
+	global frequency,logint,qn7,qn8,qn9,qn10,qn11,qn12,elower,eupper,intensity,qns,catalog,catalog_file,fig,current,fig,ax,freq_sim,int_sim,T,dV,S,vlsr,ll,ul,CT,gauss,first_run,thermal,sim,GHz
 	
 	#empty out the previously-stored simulations
 	
@@ -1476,6 +1476,8 @@ def restore(x):
 	#read in the save file as an array line by line
 	
 	restore_array = []
+	
+	GHz = False
 	
 	try:
 		with open(x) as input:

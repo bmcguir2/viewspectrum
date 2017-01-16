@@ -159,6 +159,8 @@ def trim_raw_array(x):
 		for y in range(i,i2):
 	
 			trimmed_array.append(x[y])
+			
+			
 		
 	return trimmed_array				
 	
@@ -1002,13 +1004,28 @@ def read_obs(x):
 	
 	if obs[0].split(':')[0] == '#title':
 	
-		if obs[3].split('(')[1].strip(')\n') == 'GHz':
+		i = 0
+		j = 0
+	
+		while i == 0:
 		
-			GHz = True
+			if obs[j].split(':')[0] == '#xLabel':
+		
+				if obs[j].split('[')[1].strip(']\n') == 'GHz':
+				
+					GHz = True
+				
+			if obs[j].split(':')[0] == '#region (world)':
 			
-		coords = obs[1].split('[[')[1].strip(']]\n')	
+				coords = obs[j].split(':')[1].strip('\n')
+			
+			if obs[j][0] != '#':
+			
+				i = 1
+				
+			j += 1		
 		
-		del obs[:7]
+		del obs[:j+1]
 	
 	global freq_obs,int_obs
 

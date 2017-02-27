@@ -22,6 +22,7 @@
 # 3.3 - adding option for multi-frequency ranges in ll and ul
 # 3.4 - adds flag to use for reading in spectra
 # 3.5 - adds logic to detect import of directly-exported casa spectra
+# 3.6 - adds ability to put an intensity cutoff in the simulations to prevent huge calculations
 
 #############################################################
 #							Preamble						#
@@ -49,7 +50,7 @@ import matplotlib.lines as mlines
 from datetime import datetime, date, time
 #warnings.filterwarnings('error')
 
-version = 3.5
+version = 3.6
 
 h = 6.626*10**(-34) #Planck's constant in J*s
 k = 1.381*10**(-23) #Boltzmann's constant in J/K
@@ -69,6 +70,10 @@ error_limit = float('inf')
 GHz = False
 
 coords = None
+
+rms = float('-inf') #rms noise.  the simulation won't simulate any lines 10x smaller than this value.
+
+rms = 0.023
 
 thermal = float('inf') #initial default cutoff for optically-thick lines (i.e. don't touch them unless thermal is modified.)
 
@@ -376,46 +381,13 @@ def splice_array(x):
 	
 #det_qns determines how many qns represent each state
 
-def det_qns(qn7,qn8,qn9,qn10,qn11,qn12):
+def det_qns(qnformat):
 
 	'''
 	determines how many qns represent each state
 	'''
 	
-	qns = 1
-	
-	try:
-		int(qn8[0])
-		qns = 2
-	except ValueError:
-		pass
-	except IndexError:
-		print('There are no lines in the chosen range.  The program is about to crash, sorry.  I will fix this at some point.')
-		print('Catalog file is: {}.' .format(catalog_file))
-		
-	try:
-		int(qn9[0])
-		qns = 3
-	except ValueError:
-		pass	
-		
-	try:
-		int(qn10[0])
-		qns = 4
-	except ValueError:
-		pass	
-
-	try:
-		int(qn11[0])
-		qns = 5
-	except ValueError:
-		pass
-		
-	try:
-		int(qn12[0])
-		qns = 6
-	except ValueError:
-		pass		
+	qns = int(str(qnformat[0])[-1:])
 
 	return qns
 
@@ -610,7 +582,7 @@ def sim_gaussian(int_sim,freq,linewidth):
 	
 		freq_gauss.extend(freq_line)
 	
-	int_gauss = [0] * len(freq_gauss)
+	int_gauss = [0.0] * len(freq_gauss)
 	
 	freq_gauss.sort()
 	
@@ -619,6 +591,10 @@ def sim_gaussian(int_sim,freq,linewidth):
 	alerted = False
 
 	for x in range(int_sim.shape[0]):
+	
+		if abs(int_sim[x]) < rms/10:
+		
+			continue
 	
 		telapsed = tm.time() - start_time
 		
@@ -639,7 +615,10 @@ def sim_gaussian(int_sim,freq,linewidth):
 
 		int_gauss += int_sim[x]*exp(-((freq_gauss - freq[x])**2/(2*c**2)))
 		
-	int_gauss[int_gauss > thermal] = thermal	
+	try:
+		int_gauss[int_gauss > thermal] = thermal
+	except TypeError:
+		pass	
 	
 	return(freq_gauss,int_gauss)
 
@@ -1211,12 +1190,12 @@ def overplot(x,cchoice=None):
 	
 	save_results('last.results')
 		
-#load_mol loads a new molecule into the system.  Make sure to store the old molecule simulation first, if you want to get it back.  The current graph will be updated with the new molecule.  Catalog file must be given as a string, without the *.cat as usual.  Simulation will begin with the same T, dV, S, vlsr as previous, so change those first if you want.
+#load_mol loads a new molecule into the system.  Make sure to store the old molecule simulation first, if you want to get it back.  The current graph will be updated with the new molecule.  Catalog file must be given as a string.  Simulation will begin with the same T, dV, S, vlsr as previous, so change those first if you want.
 
-def load_mol(x):
+def load_mol(x,format='spcat'):
 
 	'''
-	loads a new molecule into the system.  Make sure to store the old molecule simulation first, if you want to get it back.  The current graph will be updated with the new molecule.  Catalog file must be given as a string, without the *.cat as usual.  Simulation will begin with the same T, dV, S, vlsr as previous, so change those first if you want.
+	loads a new molecule into the system.  Make sure to store the old molecule simulation first, if you want to get it back.  The current graph will be updated with the new molecule.  Catalog file must be given as a string.  Simulation will begin with the same T, dV, S, vlsr as previous, so change those first if you want.
 	'''
 
 	global frequency,logint,qn7,qn8,qn9,qn10,qn11,qn12,elower,eupper,intensity,qns,catalog,catalog_file,fig,current,fig,ax,freq_sim,int_sim,first_run
@@ -1253,12 +1232,13 @@ def load_mol(x):
 	qn11 = np.asarray(catalog[18])
 	qn12 = np.asarray(catalog[19])
 	elower = np.asarray(catalog[4])
+	qnformat = np.asarray(catalog[7])
 
 	eupper = np.empty_like(elower)
 
 	eupper = elower + frequency/29979.2458
 
-	qns = det_qns(qn7,qn8,qn9,qn10,qn11,qn12) #figure out how many qns we have for the molecule
+	qns = det_qns(qnformat) #figure out how many qns we have for the molecule
 
 	intensity = convert_int(logint)
 	
@@ -1357,7 +1337,8 @@ def save_results(x):
 		output.write('gauss:\t{}\n' .format(gauss))
 		output.write('catalog_file:\t{}\n' .format(catalog_file))
 		output.write('thermal:\t{} K\n' .format(thermal))
-		output.write('GHz:\t{}\n\n' .format(GHz))
+		output.write('GHz:\t{}\n' .format(GHz))
+		output.write('rms:\t{}\n\n' .format(rms))
 	
 		output.write('#### Stored Simulations ####\n\n')
 		
@@ -1425,7 +1406,7 @@ def sum_stored():
 	
 			freq_gauss.extend(freq_line)
 	
-	int_gauss = [0] * len(freq_gauss)
+	int_gauss = [0.0] * len(freq_gauss)
 	
 	freq_gauss.sort()
 	
@@ -1446,6 +1427,10 @@ def sum_stored():
 		tmp_int[tmp_int > thermal] = thermal
 	
 		for y in range(len(tmp_int)):
+		
+			if abs(tmp_int[y]) < rms/10:
+			
+				continue
 		
 			l_f = sim[x].dV*tmp_freq[y]/ckm #get the FWHM in MHz
 			
@@ -1482,9 +1467,11 @@ def restore(x):
 
 	'''
 	restores the state of the program from a save file, loading all stored spectra into memory, loads the previously active simulation into current, and restores the last active graph. x is a string with the filename of the restore file. The catalog files must be present, and named to match those in the save file.
+	
+	This procedure attempts to correct for any backward compatability issues with old versions of the program.  Usually the restore will proceed without issue and will warn the user if there were issues it corrected.  The simplest way to update a restore file is to save it with the latest version of the program after a successful load.  Most of the time, the backwards compatability issues are caused simply by missing meta-data that have been added in later version of the program.  In this case, the default values are simply used.
 	'''
 
-	global frequency,logint,qn7,qn8,qn9,qn10,qn11,qn12,elower,eupper,intensity,qns,catalog,catalog_file,fig,current,fig,ax,freq_sim,int_sim,T,dV,S,vlsr,ll,ul,CT,gauss,first_run,thermal,sim,GHz
+	global frequency,logint,qn7,qn8,qn9,qn10,qn11,qn12,elower,eupper,intensity,qns,catalog,catalog_file,fig,current,fig,ax,freq_sim,int_sim,T,dV,S,vlsr,ll,ul,CT,gauss,first_run,thermal,sim,GHz,rms
 	
 	#empty out the previously-stored simulations
 	
@@ -1517,6 +1504,14 @@ def restore(x):
 	
 	restore_date = restore_array[1].split()[1]
 	restore_time = restore_array[1].split()[2]	
+	
+	#do a version check
+	
+	restore_version = float(restore_array[0].split()[2])
+	
+	if restore_version != version:
+	
+		print('Warning: {} was created using v{}.  The current version is v{}.  Type help(restore) for more information.' .format(x,restore_version,version))   
 		
 	#separate out the sections into their own arrays
 
@@ -1544,6 +1539,12 @@ def restore(x):
 		
 	#just to be safe, let's set the upper limits, lower limits, gaussian toggles, thermal values, and GHz flag now.
 	
+	#what is the rms level set at?
+	
+	try:
+		rms = float(active_array[13].split('\t')[1].strip('\n'))
+	except IndexError:
+		print('The restore file does not have an rms value in it.  It was probably generated with a previous version of the program. The restore can proceed, but it is recommended that you re-save the restore file with the latest version of the program.')
 	
 	#are we simulating Gaussians?
 	
@@ -1701,6 +1702,10 @@ def use_GHz():
 	global GHz
 	
 	GHz = True
+
+	
+	
+
 
 #############################################################
 #							Classes for Storing Results		#

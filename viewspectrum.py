@@ -23,6 +23,7 @@
 # 3.4 - adds flag to use for reading in spectra
 # 3.5 - adds logic to detect import of directly-exported casa spectra
 # 3.6 - adds ability to put an intensity cutoff in the simulations to prevent huge calculations
+# 4.0 - adds full storage of partition function information
 
 #############################################################
 #							Preamble						#
@@ -50,7 +51,7 @@ import matplotlib.lines as mlines
 from datetime import datetime, date, time
 #warnings.filterwarnings('error')
 
-version = 3.6
+version = 4.0
 
 h = 6.626*10**(-34) #Planck's constant in J*s
 k = 1.381*10**(-23) #Boltzmann's constant in J/K
@@ -101,7 +102,6 @@ gauss = True #toggle for simulating Gaussians or a stick spectrum.  Default is T
 #							Functions						#
 #############################################################
 	
-	
 #read_cat reads the catalog file in
 
 def read_cat(catalog_file):
@@ -123,51 +123,6 @@ def read_cat(catalog_file):
 		return			
 			
 	return my_array	
-	
-#trim_raw_array takes the raw_array and trims it at the specified ll and ul
-
-def trim_raw_array(x):
-
-	'''
-	takes the raw array and trims it at the specified ll and ul.  ll and ul can be either single values (int or float) or an array of such, i.e. ll = [min1,min2] ul = [max1,max2]
-	'''
-
-	tmp_array = np.arange(len(x),dtype=np.float)	#create a temporary array to splice out the frequency
-	
-	for line in range(len(x)):
-	
-		tmp_array[line] = float(str(x[line][:13]).strip())
-		
-	trimmed_array = []
-	
-	if type(ll) == int or type(ll) == float:
-	
-		tmp_ll = [ll]
-		tmp_ul = [ul]
-		
-	else:
-	
-		tmp_ll = list(ll)
-		tmp_ul = list(ul)
-		
-	for z in range(len(tmp_ll)):		
-	
-		try:
-			i = np.where(tmp_array > tmp_ll[z])[0][0]	#get the index of the first value above the lower limit
-		except IndexError:
-			i = 0								#if the catalog begins after the lower limit
-		try:
-			i2 = np.where(tmp_array > tmp_ul[z])[0][0]	#get the index of the first value above the upper limit
-		except IndexError:
-			i2 = len(tmp_array)					#if the catalog ends before the upper limit is reached
-
-		for y in range(i,i2):
-	
-			trimmed_array.append(x[y])
-			
-			
-		
-	return trimmed_array				
 	
 #fix_qn fixes quantum number issues
 
@@ -535,7 +490,9 @@ def scale_temp(int_sim,qns,elower,qn7,qn8,qn9,qn10,qn11,qn12,T,CT,catalog_file):
 	Q_T = calc_q(qns,elower,qn7,qn8,qn9,qn10,qn11,qn12,T,catalog_file)
 	Q_CT = calc_q(qns,elower,qn7,qn8,qn9,qn10,qn11,qn12,CT,catalog_file)
 	
-	scaled_int = int_sim * (Q_CT/Q_T) * exp(-(((1/T)-(1/CT))*elower)/0.695)
+	elower_tmp = trim_array(elower,frequency,ll,ul)
+	
+	scaled_int = int_sim * (Q_CT/Q_T) * exp(-(((1/T)-(1/CT))*elower_tmp)/0.695)
 	
 # 	for i in range(len(scaled_int)):
 # 	
@@ -688,12 +645,14 @@ def run_sim(freq,intensity,T,dV,S):
 	'''
 	Runs a full simulation accounting for the currently-active T, dV, S, and vlsr values, as well as any thermal cutoff for optically-thick lines
 	'''
+			
+	int_temp_0 = trim_array(intensity,frequency,ll,ul)	
 
-	int_temp = scale_temp(intensity,qns,elower,qn7,qn8,qn9,qn10,qn11,qn12,T,CT,catalog_file)
+	int_temp = scale_temp(int_temp_0,qns,elower,qn7,qn8,qn9,qn10,qn11,qn12,T,CT,catalog_file)
 
 	int_temp *= S
 	
-	freq_tmp = np.copy(freq)
+	freq_tmp = trim_array(frequency,frequency,ll,ul)
 	
 	int_temp[int_temp > thermal] = thermal	
 	
@@ -708,6 +667,46 @@ def run_sim(freq,intensity,T,dV,S):
 		int_sim = int_temp
 		
 	return freq_sim,int_sim
+	
+#trim_array trims any given input array to the specified frequency ranges
+
+def trim_array(array,frequency,ll,ul):
+
+	'''
+	trims any given input array to the specified frequency ranges.  Ranges can be 
+	'''
+
+	if type(ll) == int or type(ll) == float:
+	
+		tmp_ll = [ll]
+		tmp_ul = [ul]
+		
+	else:
+	
+		tmp_ll = list(ll)
+		tmp_ul = list(ul)
+		
+	for z in range(len(tmp_ll)):
+	
+		try:
+			i = np.where(frequency > tmp_ll[z])[0][0] 	#get the index of the first value above the lower limit
+		except IndexError:
+			i = 0									#if the catalog begins after the lower limit
+			
+		try:
+			i2 = np.where(frequency > tmp_ul[z])[0][0]	#get the index of the first value above the upper limit	
+		except IndexError:
+			i2 = len(frequency)							#if the catalog ends before the upper limit is reached		
+			
+		if z == 0:
+		
+			trimmed_array = np.copy(array[i:i2])
+			
+		else:
+		
+			trimmed_array = np.append(trimmed_array,array[i:i2])
+	
+	return trimmed_array		
 	
 #mod_T changes the temperature, re-simulates, and re-plots	
 	
@@ -743,7 +742,9 @@ def modT(x):
 
 		lines['current'] = ax.plot(freq_sim,int_sim,color = 'red',label='current',zorder=500)
 		
-	ax.legend()
+	with warnings.catch_warnings():
+		warnings.simplefilter('ignore')
+		ax.legend()
 	fig.canvas.draw()
 	
 	save_results('last.results')
@@ -782,7 +783,9 @@ def modS(x):
 
 		lines['current'] = ax.plot(freq_sim,int_sim,color = 'red',label='current',zorder=500)
 		
-	ax.legend()
+	with warnings.catch_warnings():
+		warnings.simplefilter('ignore')
+		ax.legend()
 	fig.canvas.draw()
 	
 	save_results('last.results')
@@ -821,7 +824,9 @@ def moddV(x):
 
 		lines['current'] = ax.plot(freq_sim,int_sim,color = 'red',label='current',zorder=500)
 		
-	ax.legend()
+	with warnings.catch_warnings():
+		warnings.simplefilter('ignore')
+		ax.legend()
 	fig.canvas.draw()
 	
 	save_results('last.results')
@@ -860,7 +865,9 @@ def modVLSR(x):
 
 		lines['current'] = ax.plot(freq_sim,int_sim,color = 'red',label='current',zorder=500)
 	
-	ax.legend()
+	with warnings.catch_warnings():
+		warnings.simplefilter('ignore')
+		ax.legend()
 	fig.canvas.draw()
 	
 	save_results('last.results')		
@@ -914,7 +921,10 @@ def make_plot():
 
 		lines['current'] = ax.plot(freq_sim,int_sim,color = 'red',label='current',zorder=500)	
 
-	ax.legend()
+	with warnings.catch_warnings():
+		warnings.simplefilter('ignore')
+		ax.legend()
+		
 	fig.canvas.draw()
 	
 	save_results('last.results')
@@ -958,7 +968,9 @@ def obs_on():
 
 	try:
 		lines['obs'] = 	ax.plot(freq_obs,int_obs,color = 'black',label='obs',zorder=0)
-		ax.legend()
+		with warnings.catch_warnings():
+			warnings.simplefilter('ignore')
+			ax.legend()
 		fig.canvas.draw()
 		save_results('last.results')
 	except:
@@ -1115,7 +1127,9 @@ def recall(x):
 		
 	try:
 		plt.get_fignums()[0]	
-		ax.legend()
+		with warnings.catch_warnings():
+			warnings.simplefilter('ignore')
+			ax.legend()
 		fig.canvas.draw()
 	except:	
 		make_plot()	
@@ -1182,7 +1196,9 @@ def overplot(x,cchoice=None):
 	
 	lines[sim[x].name] = ax.plot(freq_sim,int_sim,color = line_color, linestyle=line_style, label = sim[x].name)
 	
-	ax.legend()
+	with warnings.catch_warnings():
+		warnings.simplefilter('ignore')
+		ax.legend()
 	fig.canvas.draw()
 	
 	freq_sim = freq_temp
@@ -1213,15 +1229,7 @@ def load_mol(x,format='spcat'):
 	
 	raw_array = read_cat(catalog_file)
 
-	trimmed_array = trim_raw_array(raw_array)
-	
-	try:
-		trimmed_array[0]
-	except:
-		print('There were no lines in the frequency range for {}.' .format(x))
-		return False
-
-	catalog = splice_array(trimmed_array)
+	catalog = splice_array(raw_array)
 
 	frequency = np.copy(catalog[0])
 	logint = np.copy(catalog[2])
@@ -1271,7 +1279,9 @@ def load_mol(x,format='spcat'):
 
 		lines['current'] = ax.plot(freq_sim,int_sim,color = 'red',label='current',zorder=500)	
 
-	ax.legend()
+	with warnings.catch_warnings():
+		warnings.simplefilter('ignore')
+		ax.legend()
 	fig.canvas.draw()	
 	
 	save_results('last.results')
@@ -1293,12 +1303,18 @@ def clear_line(x):
 	
 	try:
 		line.remove()
-		ax.legend()
-		fig.canvas.draw()
+		with warnings.catch_warnings():
+			warnings.simplefilter('ignore')
+			ax.legend()
+		fig.canvas.draw()	
+
 	except:
 		line[0].remove()
-		ax.legend()
-		fig.canvas.draw()		
+		with warnings.catch_warnings():
+			warnings.simplefilter('ignore')
+			ax.legend()
+		fig.canvas.draw()	
+		
 
 #clear is an alias for clear_line
 
@@ -1458,8 +1474,11 @@ def overplot_sum():
 	
 	lines['sum'] = ax.plot(freq_sum,int_sum,color = line_color, label = 'sum', gid='sum', linestyle = '-',zorder=25)
 	
-	ax.legend()
-	fig.canvas.draw()
+	with warnings.catch_warnings():
+		warnings.simplefilter('ignore')
+		ax.legend()
+	fig.canvas.draw()	
+
 	
 #restore restores the state of the program from a save file, loading all stored spectra into memory, loads the previously active simulation into current, and restores the last active graph. x is a string with the filename of the restore file. The catalog files must be present, and named to match those in the save file.
 
@@ -1659,8 +1678,10 @@ def restore(x):
 			
 			lines[name] = ax.plot(sim[name].freq_sim,sim[name].int_sim,color = line_color, linestyle=line_style, label = name)	
 			
-		ax.legend()
-		fig.canvas.draw()
+		with warnings.catch_warnings():
+			warnings.simplefilter('ignore')
+			ax.legend()
+		fig.canvas.draw()	
 		
 	#If we made it here, we were successful, so let's print out what we did
 	

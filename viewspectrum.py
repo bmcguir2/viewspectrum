@@ -24,6 +24,7 @@
 # 3.5 - adds logic to detect import of directly-exported casa spectra
 # 3.6 - adds ability to put an intensity cutoff in the simulations to prevent huge calculations
 # 4.0 - adds full storage of partition function information
+# 5.0 - adds full simulation (column density / intensity) capabilities
 
 #############################################################
 #							Preamble						#
@@ -51,7 +52,7 @@ import matplotlib.lines as mlines
 from datetime import datetime, date, time
 #warnings.filterwarnings('error')
 
-version = 4.0
+version = 5.0
 
 h = 6.626*10**(-34) #Planck's constant in J*s
 k = 1.381*10**(-23) #Boltzmann's constant in J/K
@@ -97,6 +98,20 @@ dV = 5.0 #linewidth of the simulation.  Default is 5.0 km/s.
 CT = 300.0 #temperature the catalog is simulated at.  Default is 300 K.
 
 gauss = True #toggle for simulating Gaussians or a stick spectrum.  Default is True.
+
+mode = 'SD' #sets the simulation either for a single dish ('SD') facility, which calculates dynamic beam sizes, or an array ('A'), which uses a fixed synthesized beam size.  Set this option manually, with configure_telescope(), or with init_telescope().
+
+dish_size = 10.0 #dish diamater of a single dish telescope in meters.  Set this option manually, with configure_telescope(), or with init_telescope().
+
+eta = 0.7 #beam efficiency of the telescope.  Set this option manually, with configure_telescope(), or with init_telescope(). 
+
+units = 'K' #either 'K' or 'Jy/beam'.  Set this option manually, with configure_telescope(), or with init_telescope().
+
+synth_beam = 1.0 #synthesized beam size for an array in arcseconds.  Only used if mode = 'A'.  Set this option manually, with configure_telescope(), or with init_telescope().
+
+column_sim = False #if this is false (default), then S is just a static scalar.  If this is True, S is the column density, and the telescope correction is applied.
+
+source_size = 200.0 #source size in arcseconds.  Set this option manually or with init_source().
 
 #############################################################
 #							Functions						#
@@ -489,10 +504,9 @@ def scale_temp(int_sim,qns,elower,qn7,qn8,qn9,qn10,qn11,qn12,T,CT,catalog_file):
 	
 	Q_T = calc_q(qns,elower,qn7,qn8,qn9,qn10,qn11,qn12,T,catalog_file)
 	Q_CT = calc_q(qns,elower,qn7,qn8,qn9,qn10,qn11,qn12,CT,catalog_file)
+
 	
-	elower_tmp = trim_array(elower,frequency,ll,ul)
-	
-	scaled_int = int_sim * (Q_CT/Q_T) * exp(-(((1/T)-(1/CT))*elower_tmp)/0.695)
+	scaled_int = int_sim * (Q_CT/Q_T) * exp(-(((1/T)-(1/CT))*elower)/0.695)
 	
 # 	for i in range(len(scaled_int)):
 # 	
@@ -645,14 +659,20 @@ def run_sim(freq,intensity,T,dV,S):
 	'''
 	Runs a full simulation accounting for the currently-active T, dV, S, and vlsr values, as well as any thermal cutoff for optically-thick lines
 	'''
-			
-	int_temp_0 = trim_array(intensity,frequency,ll,ul)	
 
-	int_temp = scale_temp(int_temp_0,qns,elower,qn7,qn8,qn9,qn10,qn11,qn12,T,CT,catalog_file)
+	int_temp = scale_temp(intensity,qns,elower,qn7,qn8,qn9,qn10,qn11,qn12,T,CT,catalog_file)
 
-	int_temp *= S
+	if column_sim == False:
 	
-	freq_tmp = trim_array(frequency,frequency,ll,ul)
+		int_temp *= S
+		
+	else:
+	
+		int_temp = apply_telescope(eupper,T,freq,dV,eta,S,tbg)
+		
+	int_temp = trim_array(int_temp,frequency,ll,ul)		
+	
+	freq_tmp = trim_array(freq,frequency,ll,ul)
 	
 	int_temp[int_temp > thermal] = thermal	
 	
@@ -1214,7 +1234,7 @@ def load_mol(x,format='spcat'):
 	loads a new molecule into the system.  Make sure to store the old molecule simulation first, if you want to get it back.  The current graph will be updated with the new molecule.  Catalog file must be given as a string.  Simulation will begin with the same T, dV, S, vlsr as previous, so change those first if you want.
 	'''
 
-	global frequency,logint,qn7,qn8,qn9,qn10,qn11,qn12,elower,eupper,intensity,qns,catalog,catalog_file,fig,current,fig,ax,freq_sim,int_sim,first_run
+	global frequency,logint,qn7,qn8,qn9,qn10,qn11,qn12,elower,eupper,intensity,qns,catalog,catalog_file,fig,current,fig,ax,freq_sim,int_sim,first_run,tbg
 	
 	
 	if first_run == False:
@@ -1241,6 +1261,10 @@ def load_mol(x,format='spcat'):
 	qn12 = np.asarray(catalog[19])
 	elower = np.asarray(catalog[4])
 	qnformat = np.asarray(catalog[7])
+	
+	tbg = np.empty_like(elower)
+	
+	tbg.fill(2.7) #background temperature in the source, defaulting to CMB.  Can change this manually or with init_source()
 
 	eupper = np.empty_like(elower)
 
@@ -1724,9 +1748,121 @@ def use_GHz():
 	
 	GHz = True
 
-	
-	
+#calc_beam returns an array of beam sizes for a telescope at each point.  This is a constant value if mode = 'A' for the synthesized beam.
 
+def calc_beam(frequency):
+
+	'''
+	returns an array of beam sizes for a telescope at each point.  This is a constant value if mode = 'A' for the synthesized beam.
+	'''
+	
+	beam_size = np.copy(frequency)
+	
+	if mode == 'A':
+	
+		beam_size.fill(synth_beam)
+		
+	else:
+	
+		beam_size = (1.22*(3*10**8/(frequency*10**6))/dish_size) * 206265
+
+	return beam_size
+	
+#calc_bcorr calculates and returns the beam dilution correction factor at each frequency, given the source size and the beam size
+
+def calc_bcorr(frequency,beam_size):
+
+	'''
+	calculates and returns the beam dilution correction factor at each frequency, given the source size and the beam size
+	'''
+	
+	bcorr = np.copy(frequency)
+	
+	bcorr = (source_size**2 + beam_size**2)/source_size**2
+	
+	return bcorr
+	
+#apply_telescope takes a simulation and applies a correction factor to the intensity based on a provided telescope configuration, column density, and source structure
+
+def apply_telescope(eupper,T,freq,dV,eta,NT,tbg):
+
+	'''
+	takes a simulation and applies a correction factor to the intensity based on a provided telescope configuration, column density, and source structure
+	'''
+	
+	Q_300 = calc_q(qns,elower,qn7,qn8,qn9,qn10,qn11,qn12,300,catalog_file)
+	
+	sij = (exp(np.float64(-(elower/0.695)/300)) - exp(np.float64(-(eupper/0.695)/300)))**(-1) * ((10**logint)/frequency) * ((4.16231*10**(-5))**(-1)) * Q_300
+	
+	Q_T = calc_q(qns,elower,qn7,qn8,qn9,qn10,qn11,qn12,T,catalog_file)
+
+	A = 3*k/(8*(np.pi**3))
+	
+	B = Q_T*np.exp(np.float64(eupper/T))/(freq*(1*10**6)*sij*(1*10**(-43)))
+	
+	C = 0.5*(np.pi/(np.log(2)))**0.5
+	
+	D1 = dV*(1*10**5)/eta
+
+	D2 = (np.exp(h*freq*(1*10**6)/(k*T)) -1)
+	
+	D3 = (np.exp(h*freq*(1*10**6)/(k*tbg)) -1)
+	
+	D = D1/(1-(D2/D3))
+	
+	TA = NT/(A*B*C*D)	
+	
+	beam_size = calc_beam(frequency)
+	
+	bcorr = calc_bcorr(frequency,beam_size)
+	
+	TA /= bcorr
+
+	return TA
+
+#init_source initializes a pre-loaded set of conditions for specific sources
+
+def init_source(source,size=0.0):
+
+	'''
+	Initalizes a pre-loaded set of conditions for specific sources.  Options are:
+	SGRB2N: Requires the desired source size to be set with the size command.  Sets tbg according to Hollis et al. 2007 ApJ 660, L125 (probably not valid below 10 GHz) or other measurements at higher frequencies (XXX, YYY, ZZZ)
+	'''
+	global source_size,tbg,dish_size
+	
+	if source == 'SGRB2N':
+	
+		dish_size = 100.0
+	
+		source_size = 20.0  #The emitting region for the background continuum in SgrB2 is always 20"
+		
+		beam_size = calc_beam(frequency)
+		
+		bcorr_tbg = calc_bcorr(source_size,beam_size) #calculate the correction factor for the continuum
+		
+		tbg = (10**(-1.06*np.log10(frequency/1000) + 2.3))*bcorr_tbg
+		
+		for x in range(tbg.shape[0]):
+	
+			if frequency[x] > 60000:
+		
+				tbg[x] = 5.2
+			
+			if frequency[x] > 130000:
+		
+				tbg[x] = 6.5
+			
+			if frequency[x] > 230000:
+		
+				tbg[x] = 10.0
+			
+			if frequency[x] > 1000000:
+		
+				tbg[x] = 13.7		
+		
+		source_size = size
+
+	return
 
 #############################################################
 #							Classes for Storing Results		#

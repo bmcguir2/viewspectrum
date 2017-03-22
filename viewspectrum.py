@@ -25,6 +25,7 @@
 # 3.6 - adds ability to put an intensity cutoff in the simulations to prevent huge calculations
 # 4.0 - adds full storage of partition function information
 # 5.0 - adds full simulation (column density / intensity) capabilities
+# 5.0 - quantum number and partition function logic bug fixes
 
 #############################################################
 #							Preamble						#
@@ -52,7 +53,7 @@ import matplotlib.lines as mlines
 from datetime import datetime, date, time
 #warnings.filterwarnings('error')
 
-version = 5.0
+version = 5.1
 
 h = 6.626*10**(-34) #Planck's constant in J*s
 k = 1.381*10**(-23) #Boltzmann's constant in J/K

@@ -251,7 +251,111 @@ def fix_qn(qnarray,line,old_qn):
 		
 	if 'Z' in old_qn:
 		
-		new_qn = 350 + int(old_qn[1])																																											
+		new_qn = 350 + int(old_qn[1])
+		
+	if 'a' in old_qn:
+		
+		new_qn = 100 + int(old_qn[1])
+		
+	if 'b' in old_qn:
+		
+		new_qn = 110 + int(old_qn[1])	
+		
+	if 'c' in old_qn:
+		
+		new_qn = 120 + int(old_qn[1])		
+
+	if 'd' in old_qn:
+		
+		new_qn = 130 + int(old_qn[1])
+		
+	if 'e' in old_qn:
+		
+		new_qn = 140 + int(old_qn[1])
+		
+	if 'f' in old_qn:
+		
+		new_qn = 150 + int(old_qn[1])
+		
+	if 'g' in old_qn:
+		
+		new_qn = 160 + int(old_qn[1])
+		
+	if 'h' in old_qn:
+		
+		new_qn = 170 + int(old_qn[1])				
+		
+	if 'i' in old_qn:
+		
+		new_qn = 180 + int(old_qn[1])	
+		
+	if 'j' in old_qn:
+		
+		new_qn = 190 + int(old_qn[1])
+		
+	if 'k' in old_qn:
+		
+		new_qn = 200 + int(old_qn[1])
+		
+	if 'l' in old_qn:
+		
+		new_qn = 210 + int(old_qn[1])
+		
+	if 'm' in old_qn:
+		
+		new_qn = 220 + int(old_qn[1])	
+		
+	if 'n' in old_qn:
+		
+		new_qn = 230 + int(old_qn[1])	
+		
+	if 'o' in old_qn:
+		
+		new_qn = 240 + int(old_qn[1])
+		
+	if 'p' in old_qn:
+		
+		new_qn = 250 + int(old_qn[1])
+		
+	if 'q' in old_qn:
+		
+		new_qn = 260 + int(old_qn[1])	
+		
+	if 'r' in old_qn:
+		
+		new_qn = 270 + int(old_qn[1])
+		
+	if 's' in old_qn:
+		
+		new_qn = 280 + int(old_qn[1])
+		
+	if 't' in old_qn:
+		
+		new_qn = 290 + int(old_qn[1])	
+		
+	if 'u' in old_qn:
+		
+		new_qn = 300 + int(old_qn[1])	
+		
+	if 'v' in old_qn:
+		
+		new_qn = 310 + int(old_qn[1])
+		
+	if 'w' in old_qn:
+		
+		new_qn = 320 + int(old_qn[1])	
+		
+	if 'x' in old_qn:
+		
+		new_qn = 330 + int(old_qn[1])	
+		
+	if 'y' in old_qn:
+		
+		new_qn = 340 + int(old_qn[1])	
+		
+	if 'z' in old_qn:
+		
+		new_qn = 350 + int(old_qn[1])																																												
 				
 	qnarray[line] = int(new_qn)			
 	

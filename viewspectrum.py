@@ -26,6 +26,7 @@
 # 4.0 - adds full storage of partition function information
 # 5.0 - adds full simulation (column density / intensity) capabilities
 # 5.0 - quantum number and partition function logic bug fixes
+# 5.2 - fixes major bug restoring files
 
 #############################################################
 #							Preamble						#
@@ -53,7 +54,7 @@ import matplotlib.lines as mlines
 from datetime import datetime, date, time
 #warnings.filterwarnings('error')
 
-version = 5.1
+version = 5.2
 
 h = 6.626*10**(-34) #Planck's constant in J*s
 k = 1.381*10**(-23) #Boltzmann's constant in J/K
@@ -512,6 +513,10 @@ def calc_q(qns,elower,qn7,qn8,qn9,qn10,qn11,qn12,T,catalog_file):
 	elif catalog_file.lower()=='c2n.cat' or catalog_file.lower()=='ccn.cat':
 		
 		Q = 1.173755*10**(-11)*T**6 - 1.324086*10**(-8)*T**5 + 5.99936*10**(-6)*T**4 - 1.40473*10**(-3)*T**3 + 0.1837397*T**2 + 7.135161*T + 22.55770
+		
+	elif catalog_file.lower()=='ch2nh.cat':
+	
+		Q = 1.2152*T**1.4863
 	
 	else:
 	
@@ -1537,13 +1542,19 @@ def sum_stored():
 		tmp_freq = np.copy(sim[x].frequency)
 		
 		tmp_freq += (-sim[x].vlsr)*tmp_freq/ckm	
+		
+		tmp_freq_trimmed = trim_array(tmp_freq,tmp_freq,ll,ul)
+		
+		tmp_int = np.copy(sim[x].intensity)
+		
+		tmp_int_trimmed = trim_array(tmp_int,tmp_freq,ll,ul)
 
-		for y in range(len(sim[x].intensity)):
+		for y in range(len(tmp_int_trimmed)):
 	
-			l_f = sim[x].dV*tmp_freq[y]/ckm #get the FWHM in MHz
+			l_f = sim[x].dV*tmp_freq_trimmed[y]/ckm #get the FWHM in MHz
 	
-			min_f = tmp_freq[y] - 10*l_f #get the frequency 10 FWHM lower
-			max_f = tmp_freq[y] + 10*l_f #get the frequency 10 FWHM higher
+			min_f = tmp_freq_trimmed[y] - 10*l_f #get the frequency 10 FWHM lower
+			max_f = tmp_freq_trimmed[y] + 10*l_f #get the frequency 10 FWHM higher
 	
 			res_pnts = l_f / 15 #determine a resolution element (15 points across the line)
 	
@@ -1555,7 +1566,7 @@ def sum_stored():
 	
 	freq_gauss.sort()
 	
-	del tmp_freq
+	del tmp_freq, tmp_freq_trimmed, tmp_int, tmp_int_trimmed
 		
 	for x in sim:
 	
@@ -1563,25 +1574,29 @@ def sum_stored():
 		
 		tmp_freq += (-sim[x].vlsr)*tmp_freq/ckm	
 		
+		tmp_freq_trimmed = trim_array(tmp_freq,tmp_freq,ll,ul)
+		
 		tmp_int = np.copy(sim[x].intensity)
 		
 		tmp_int = scale_temp(tmp_int,sim[x].qns,sim[x].elower,sim[x].qn7,sim[x].qn8,sim[x].qn9,sim[x].qn10,sim[x].qn11,sim[x].qn12,sim[x].T,sim[x].CT,sim[x].catalog_file)
 		
-		tmp_int *= sim[x].S
+		tmp_int_trimmed = trim_array(tmp_int,tmp_freq,ll,ul)
 		
-		tmp_int[tmp_int > thermal] = thermal
+		tmp_int_trimmed *= sim[x].S
+		
+		tmp_int_trimmed[tmp_int_trimmed > thermal] = thermal
 	
-		for y in range(len(tmp_int)):
+		for y in range(len(tmp_int_trimmed)):
 		
-			if abs(tmp_int[y]) < rms/10:
+			if abs(tmp_int_trimmed[y]) < rms/10:
 			
 				continue
 		
-			l_f = sim[x].dV*tmp_freq[y]/ckm #get the FWHM in MHz
+			l_f = sim[x].dV*tmp_freq_trimmed[y]/ckm #get the FWHM in MHz
 			
 			c = l_f/2.35482
 
-			int_gauss += tmp_int[y]*exp(-((freq_gauss - tmp_freq[y])**2/(2*c**2)))
+			int_gauss += tmp_int_trimmed[y]*exp(-((freq_gauss - tmp_freq_trimmed[y])**2/(2*c**2)))
 			
 	int_gauss[int_gauss > thermal] = thermal
 	

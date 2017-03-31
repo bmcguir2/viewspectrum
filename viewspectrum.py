@@ -27,6 +27,7 @@
 # 5.0 - adds full simulation (column density / intensity) capabilities
 # 5.0 - quantum number and partition function logic bug fixes
 # 5.2 - fixes major bug restoring files
+# 5.3 - fixes edge case where imported catalog file has no lines in the window
 
 #############################################################
 #							Preamble						#
@@ -54,7 +55,7 @@ import matplotlib.lines as mlines
 from datetime import datetime, date, time
 #warnings.filterwarnings('error')
 
-version = 5.2
+version = 5.3
 
 h = 6.626*10**(-34) #Planck's constant in J*s
 k = 1.381*10**(-23) #Boltzmann's constant in J/K
@@ -815,22 +816,30 @@ def trim_array(array,frequency,ll,ul):
 	
 		tmp_ll = list(ll)
 		tmp_ul = list(ul)
+	
+	foo = 0
+	
+	trimmed_array = np.array([])
 		
 	for z in range(len(tmp_ll)):
 	
 		try:
 			i = np.where(frequency > tmp_ll[z])[0][0] 	#get the index of the first value above the lower limit
 		except IndexError:
-			i = 0									#if the catalog begins after the lower limit
+			if frequency[-1] < tmp_ll[z]:
+				continue
+			else:
+				i = 0									#if the catalog begins after the lower limit
 			
 		try:
 			i2 = np.where(frequency > tmp_ul[z])[0][0]	#get the index of the first value above the upper limit	
 		except IndexError:
 			i2 = len(frequency)							#if the catalog ends before the upper limit is reached		
 			
-		if z == 0:
+		if foo == 0:
 		
 			trimmed_array = np.copy(array[i:i2])
+			foo = 1
 			
 		else:
 		

@@ -1845,7 +1845,7 @@ def restore(x):
 def fix_legend(x,lsize):
 
 	'''
-	Modifies the legend to have x columns.  lsize can be {‘xx-small’, ‘x-small’, ‘small’, ‘medium’, ‘large’, ‘x-large’, ‘xx-large’} or an int or float.
+	Modifies the legend to have x columns.  lsize can be {'xx-small', 'x-small', 'small', 'medium', 'large', 'x-large', 'xx-large'} or an int or float.
 	'''
 
 	plt.legend(ncol=x,prop={'size':lsize})

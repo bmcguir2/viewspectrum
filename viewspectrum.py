@@ -28,6 +28,7 @@
 # 5.0 - quantum number and partition function logic bug fixes
 # 5.2 - fixes major bug restoring files
 # 5.3 - fixes edge case where imported catalog file has no lines in the window
+# 5.4 - speeds up ascii file output writing
 
 #############################################################
 #							Preamble						#
@@ -55,7 +56,7 @@ import matplotlib.lines as mlines
 from datetime import datetime, date, time
 #warnings.filterwarnings('error')
 
-version = 5.3
+version = 5.4
 
 h = 6.626*10**(-34) #Planck's constant in J*s
 k = 1.381*10**(-23) #Boltzmann's constant in J/K
@@ -728,40 +729,29 @@ def write_spectrum(x,output_file):
 		int_tmp = sim[x].int_sim
 
 	if gauss == True:
-	
-		for h in range(len(freq_tmp)):
-
-			if (h == 0): #write out the results to a out_file
 			
-				with open(output_file, 'w') as output: 
+		with open(output_file, 'w') as output: 
 					
-					output.write('{} {}\n' .format(freq_tmp[0],int_tmp[0]))
-						
-			else:
+			output.write('{} {}\n' .format(freq_tmp[0],int_tmp[0]))
 				
-				with open(output_file, 'a') as output:
+		with open(output_file, 'a') as output:
 					
-					output.write('{} {}\n' .format(freq_tmp[h],int_tmp[h]))
-						
-			h += 1		
+			for h in range(len(freq_tmp)):
+			
+				output.write('{} {}\n' .format(freq_tmp[h],int_tmp[h]))					
 	
 	else:
-	
-		for h in range(freq_tmp.shape[0]):
-
-			if (h == 0): #write out the results to a out_file
 				
-				with open(output_file, 'w') as output: 
+		with open(output_file, 'w') as output: 
 					
-					output.write('{} {}\n' .format(freq_tmp[0],int_tmp[0]))
-						
-			else:
+			output.write('{} {}\n' .format(freq_tmp[0],int_tmp[0]))
 				
-				with open(output_file, 'a') as output:
+		with open(output_file, 'a') as output:
+		
+			for h in range(freq_tmp.shape[0]):
 					
-					output.write('{} {}\n' .format(freq_tmp[h],int_tmp[h]))
-						
-			h += 1				
+				output.write('{} {}\n' .format(freq_tmp[h],int_tmp[h]))
+									
 
 #run_sim runs the simulation.  It's a meta routine, so that we can update later
 

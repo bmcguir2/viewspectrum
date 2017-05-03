@@ -29,6 +29,7 @@
 # 5.2 - fixes major bug restoring files
 # 5.3 - fixes edge case where imported catalog file has no lines in the window
 # 5.4 - speeds up ascii file output writing
+# 5.5 - enables reading of +/- quantum numbers (converts to 1 and 2, respectively.  Blanks are converted to 0)
 
 #############################################################
 #							Preamble						#
@@ -56,7 +57,7 @@ import matplotlib.lines as mlines
 from datetime import datetime, date, time
 #warnings.filterwarnings('error')
 
-version = 5.4
+version = 5.5
 
 h = 6.626*10**(-34) #Planck's constant in J*s
 k = 1.381*10**(-23) #Boltzmann's constant in J/K
@@ -142,6 +143,18 @@ def read_cat(catalog_file):
 		return			
 			
 	return my_array	
+	
+#fix_pm fixes +/- quantum number issues
+
+def fix_pm(qnarray):
+
+	if '+' or '-' in qnarray:
+	
+		qnarray[qnarray == ''] = '0'
+		qnarray[qnarray == '+'] = '1'
+		qnarray[qnarray == '-'] = '2'
+		
+	return qnarray
 	
 #fix_qn fixes quantum number issues
 
@@ -359,7 +372,7 @@ def fix_qn(qnarray,line,old_qn):
 		
 	if 'z' in old_qn:
 		
-		new_qn = 350 + int(old_qn[1])																																												
+		new_qn = 350 + int(old_qn[1])																																									
 				
 	qnarray[line] = int(new_qn)			
 	
@@ -391,6 +404,8 @@ def splice_array(x):
 	qn10 = np.empty(len(x),dtype=object)
 	qn11 = np.empty(len(x),dtype=object)
 	qn12 = np.empty(len(x),dtype=object)
+	
+	parity = ['+','-']
 
 	for line in range(len(x)):
 	
@@ -405,56 +420,152 @@ def splice_array(x):
 			fix_qn(gup,line,str(x[line][41:44]))
 		tag[line] = int(str(x[line][44:51]).strip())
 		qnformat[line] = int(str(x[line][51:55]).strip())
-		try:
-			qn1[line] = int(x[line][55:57]) if str(x[line][54:57]).strip() else ''
-		except ValueError:
-			fix_qn(qn1,line,str(x[line][55:57]))	
-		try:		
-			qn2[line] = int(x[line][57:59]) if str(x[line][57:59]).strip() else ''
-		except ValueError:
-			fix_qn(qn2,line,str(x[line][57:59]))
-		try:				
-			qn3[line] = int(x[line][59:61]) if str(x[line][59:61]).strip() else ''
-		except ValueError:
-			fix_qn(qn3,line,str(x[line][59:61]))
-		try:
-			qn4[line] = int(x[line][61:63]) if str(x[line][61:63]).strip() else ''
-		except ValueError:
-			fix_qn(qn4,line,str(x[line][61:63]))
-		try:
-			qn5[line] = int(x[line][63:65]) if str(x[line][63:65]).strip() else ''
-		except ValueError:
-			fix_qn(qn5,line,str(x[line][63:65]))
-		try:
-			qn6[line] = int(x[line][65:67]) if str(x[line][65:67]).strip() else ''
-		except ValueError:
-			fix_qn(qn6,line,str(x[line][65:67]))
-		try:
-			qn7[line] = int(x[line][67:69]) if str(x[line][67:69]).strip() else ''
-		except ValueError:
-			fix_qn(qn7,line,str(x[line][67:69]))
-		try:
-			qn8[line] = int(x[line][69:71]) if str(x[line][69:71]).strip() else ''
-		except ValueError:
-			fix_qn(qn8,line,str(x[line][69:71]))
-		try:
-			qn9[line] = int(x[line][71:73]) if str(x[line][71:73]).strip() else ''
-		except ValueError:
-			fix_qn(qn9,line,str(x[line][71:73]))
-		try:
-			qn10[line] = int(x[line][73:75]) if str(x[line][73:75]).strip() else ''
-		except ValueError:
-			fix_qn(qn10,line,str(x[line][73:75]))
-		try:
-			qn11[line] = int(x[line][75:77]) if str(x[line][75:77]).strip() else ''
-		except ValueError:
-			fix_qn(qn11,line,str(x[line][75:77]))
-		try:
-			qn12[line] = int(x[line][77:]) if str(x[line][77:]).strip() else ''
-		except ValueError:
-			fix_qn(qn12,line,str(x[line][77:]))		
-			
 
+		qn1[line] = str(x[line][54:57]).strip()
+		qn2[line] = str(x[line][57:59]).strip()
+		qn3[line] = str(x[line][59:61]).strip()
+		qn4[line] = str(x[line][61:63]).strip()
+		qn5[line] = str(x[line][63:65]).strip()
+		qn6[line] = str(x[line][65:67]).strip()
+		qn7[line] = str(x[line][67:69]).strip()
+		qn8[line] = str(x[line][69:71]).strip()
+		qn9[line] = str(x[line][71:73]).strip()
+		qn10[line] = str(x[line][73:75]).strip()
+		qn11[line] = str(x[line][75:77]).strip()
+		qn12[line] = str(x[line][77:]).strip()
+		
+	if '+' in qn1 or '-' in qn1:
+	
+		qn1 = fix_pm(qn1)
+		
+	if '+' in qn2 or '-' in qn2:
+	
+		qn2 = fix_pm(qn2)	
+
+	if '+' in qn3 or '-' in qn3:
+	
+		qn3 = fix_pm(qn3)
+		
+	if '+' in qn4 or '-' in qn4:
+	
+		qn4 = fix_pm(qn4)		
+			
+	if '+' in qn5 or '-' in qn5:
+	
+		qn5 = fix_pm(qn5)
+	
+	if '+' in qn6 or '-' in qn6:
+	
+		qn6 = fix_pm(qn6)
+		
+	if '+' in qn7 or '-' in qn7:
+	
+		qn7 = fix_pm(qn7)
+		
+	if '+' in qn8 or '-' in qn8:
+	
+		qn8 = fix_pm(qn8)
+		
+	if '+' in qn9 or '-' in qn9:
+	
+		qn9 = fix_pm(qn9)
+		
+	if '+' in qn10 or '-' in qn10:
+	
+		qn10 = fix_pm(qn10)
+		
+	if '+' in qn11 or '-' in qn11:
+	
+		qn11 = fix_pm(qn11)
+		
+	if '+' in qn12 or '-' in qn12:
+	
+		qn12 = fix_pm(qn12)														
+
+	for line in range(len(qn1)):
+	
+		try:
+			qn1[line] = int(qn1[line])
+		except ValueError:
+			fix_qn(qn1,line,qn1[line])
+			
+	for line in range(len(qn2)):
+	
+		try:
+			qn2[line] = int(qn2[line])
+		except ValueError:
+			fix_qn(qn2,line,qn2[line])
+			
+	for line in range(len(qn3)):
+	
+		try:
+			qn3[line] = int(qn3[line])
+		except ValueError:
+			fix_qn(qn3,line,qn3[line])						
+			
+	for line in range(len(qn4)):
+	
+		try:
+			qn4[line] = int(qn4[line])
+		except ValueError:
+			fix_qn(qn4,line,qn4[line])
+
+	for line in range(len(qn5)):
+	
+		try:
+			qn5[line] = int(qn5[line])
+		except ValueError:
+			fix_qn(qn5,line,qn5[line])
+			
+	for line in range(len(qn6)):
+	
+		try:
+			qn6[line] = int(qn6[line])
+		except ValueError:
+			fix_qn(qn6,line,qn6[line])
+			
+	for line in range(len(qn7)):
+	
+		try:
+			qn7[line] = int(qn7[line])
+		except ValueError:
+			fix_qn(qn7,line,qn7[line])
+			
+	for line in range(len(qn8)):
+	
+		try:
+			qn8[line] = int(qn8[line])
+		except ValueError:
+			fix_qn(qn8,line,qn8[line])
+			
+	for line in range(len(qn9)):
+	
+		try:
+			qn9[line] = int(qn9[line])
+		except ValueError:
+			fix_qn(qn9,line,qn9[line])
+						
+	for line in range(len(qn10)):
+	
+		try:
+			qn10[line] = int(qn10[line])
+		except ValueError:
+			fix_qn(qn10,line,qn10[line])
+				
+	for line in range(len(qn11)):
+	
+		try:
+			qn11[line] = int(qn11[line])
+		except ValueError:
+			fix_qn(qn11,line,qn11[line])
+			
+	for line in range(len(qn12)):
+	
+		try:
+			qn12[line] = int(qn12[line])
+		except ValueError:
+			fix_qn(qn12,line,qn12[line])	
+																							
 	return frequency,error,logint,dof,elower,gup,tag,qnformat,qn1,qn2,qn3,qn4,qn5,qn6,qn7,qn8,qn9,qn10,qn11,qn12
 	
 #det_qns determines how many qns represent each state

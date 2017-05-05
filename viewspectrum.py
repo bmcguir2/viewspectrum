@@ -30,6 +30,7 @@
 # 5.3 - fixes edge case where imported catalog file has no lines in the window
 # 5.4 - speeds up ascii file output writing
 # 5.5 - enables reading of +/- quantum numbers (converts to 1 and 2, respectively.  Blanks are converted to 0)
+# 5.6 - fixes bug in alpha quantum number reading
 
 #############################################################
 #							Preamble						#
@@ -57,7 +58,7 @@ import matplotlib.lines as mlines
 from datetime import datetime, date, time
 #warnings.filterwarnings('error')
 
-version = 5.5
+version = 5.6
 
 h = 6.626*10**(-34) #Planck's constant in J*s
 k = 1.381*10**(-23) #Boltzmann's constant in J/K
@@ -421,7 +422,7 @@ def splice_array(x):
 		tag[line] = int(str(x[line][44:51]).strip())
 		qnformat[line] = int(str(x[line][51:55]).strip())
 
-		qn1[line] = str(x[line][54:57]).strip()
+		qn1[line] = str(x[line][55:57]).strip()
 		qn2[line] = str(x[line][57:59]).strip()
 		qn3[line] = str(x[line][59:61]).strip()
 		qn4[line] = str(x[line][61:63]).strip()

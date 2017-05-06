@@ -31,6 +31,7 @@
 # 5.4 - speeds up ascii file output writing
 # 5.5 - enables reading of +/- quantum numbers (converts to 1 and 2, respectively.  Blanks are converted to 0)
 # 5.6 - fixes bug in alpha quantum number reading
+# 5.6.1 - adds feedback for bad write_spectrum syntax
 
 #############################################################
 #							Preamble						#
@@ -58,7 +59,7 @@ import matplotlib.lines as mlines
 from datetime import datetime, date, time
 #warnings.filterwarnings('error')
 
-version = 5.6
+version = 5.6.1
 
 h = 6.626*10**(-34) #Planck's constant in J*s
 k = 1.381*10**(-23) #Boltzmann's constant in J/K
@@ -837,7 +838,11 @@ def write_spectrum(x,output_file):
 		
 	else:
 	
-		freq_tmp = sim[x].freq_sim
+		try:
+			freq_tmp = sim[x].freq_sim
+		except KeyError:
+			print('\nOops: A spectrum called {} does not exist.  Either correct the typo (type sim to see the current spectrum labels), or remember that the syntax is write_spectrum(label,outputfile)' .format(x))
+			return 
 		int_tmp = sim[x].int_sim
 
 	if gauss == True:
@@ -862,8 +867,7 @@ def write_spectrum(x,output_file):
 		
 			for h in range(freq_tmp.shape[0]):
 					
-				output.write('{} {}\n' .format(freq_tmp[h],int_tmp[h]))
-									
+				output.write('{} {}\n' .format(freq_tmp[h],int_tmp[h]))									
 
 #run_sim runs the simulation.  It's a meta routine, so that we can update later
 

@@ -32,6 +32,8 @@
 # 5.5 - enables reading of +/- quantum numbers (converts to 1 and 2, respectively.  Blanks are converted to 0)
 # 5.6 - fixes bug in alpha quantum number reading
 # 5.6.1 - adds feedback for bad write_spectrum syntax
+# 5.7 - adds adjustable resolution
+# 5.8 - refines intensity scaling in move toward column density calcs
 
 #############################################################
 #							Preamble						#
@@ -59,7 +61,7 @@ import matplotlib.lines as mlines
 from datetime import datetime, date, time
 #warnings.filterwarnings('error')
 
-version = 5.61
+version = 5.8
 
 h = 6.626*10**(-34) #Planck's constant in J*s
 k = 1.381*10**(-23) #Boltzmann's constant in J/K
@@ -119,6 +121,14 @@ synth_beam = 1.0 #synthesized beam size for an array in arcseconds.  Only used i
 column_sim = False #if this is false (default), then S is just a static scalar.  If this is True, S is the column density, and the telescope correction is applied.
 
 source_size = 200.0 #source size in arcseconds.  Set this option manually or with init_source().
+
+npts_line = 15 #default is 15 points across each line
+
+res_kHz = False #if res_kHz is set to True, then the resolution of the Gaussian simulation is calculated using the value for res, and units of kHz
+
+res_kms = False #if res_kms is set to True, then the resolution of the Gaussian simulation is calculated using the value for res, and units of km/s
+
+res = 0.0 #resolution used in Gaussian simulation if res_kHz or res_kms is set to True.
 
 #############################################################
 #							Functions						#
@@ -731,7 +741,7 @@ def scale_temp(int_sim,qns,elower,qn7,qn8,qn9,qn10,qn11,qn12,T,CT,catalog_file):
 	Q_CT = calc_q(qns,elower,qn7,qn8,qn9,qn10,qn11,qn12,CT,catalog_file)
 
 	
-	scaled_int = int_sim * (Q_CT/Q_T) * exp(-(((1/T)-(1/CT))*elower)/0.695)
+	scaled_int = int_sim * (Q_CT/Q_T) * (CT/T) * exp(-(((1/T)-(1/CT))*elower)/0.695)
 	
 # 	for i in range(len(scaled_int)):
 # 	
@@ -771,8 +781,24 @@ def sim_gaussian(int_sim,freq,linewidth):
 	
 		min_f = freq[x] - 10*l_f #get the frequency 10 FWHM lower
 		max_f = freq[x] + 10*l_f #get the frequency 10 FWHM higher
+		
+		if res_kHz==True and res_kms==True:
+		
+			print('You have both the res_kHz and res_kms flags set to true.  The program will default back to the points per line value, currently {}, until you set one of these flags to False.' .format(npts_line))
 	
-		res_pnts = l_f / 15 #determine a resolution element (15 points across the line)
+			res_pnts = l_f / npts_line #determine a resolution element (15 points across the line)
+			
+		elif res_kHz == True and res_kms == False:
+		
+			res_pnts = res/1000 
+			
+		elif res_kms == True and res_kHz == False:
+		
+			res_pnts = (res*freq[x]/ckm) #get the frequency resolution from the desired velocity
+		
+		else:
+		
+			res_pnts = l_f / npts_line #determine a resolution element (15 points across the line)	
 	
 		freq_line = np.arange(min_f,max_f,res_pnts)
 	
